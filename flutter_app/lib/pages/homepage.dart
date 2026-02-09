@@ -4,6 +4,7 @@ import 'package:flutter_app/auth/auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
+import 'package:flutter_app/pages/stress_check_page.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -183,17 +184,14 @@ class HomePage extends ConsumerWidget {
               title: 'Stress Check',
               subtitle: 'Measure your stress level in minutes',
               onTap: () {
-                // open stress test page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StressCheckPage(),
+                    ),
+                  );                // open stress test page
               },
-            ),
-            FeatureCard(
-              imagePath: 'assets/images/music.jpg',
-              title: 'Calm Music',
-              subtitle: 'Soothing sounds to relax your mind',
-              onTap: () {
-                // open calm music / audio page
-              },
-            ),       
+            ),     
 
           ]
         ),
