@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
 import 'package:flutter_app/pages/stress_check_page.dart';
+import 'package:flutter_app/pages/article_page.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -210,6 +211,13 @@ class HomePage extends ConsumerWidget {
                     subtitle: 'Read expert-written articles to better understand your mind',
                     onTap: () {
                       // navigate to articles list page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ArticlesPage(),
+                        ),
+                      );
+
                     },
                   ),
             
