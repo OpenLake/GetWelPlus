@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-
-class FeatureCard extends StatelessWidget {
+class ArticleCard extends StatelessWidget {
   final String imagePath;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
-  const FeatureCard({
+  const ArticleCard({
     super.key,
     required this.imagePath,
     required this.title,
@@ -17,56 +16,65 @@ class FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+    return SizedBox(
+      height: 250,
+      width: 250,
+      child: Card(
+        elevation: 4, 
+        shadowColor: Colors.black.withOpacity(0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
+      
+              /// 🖼 Image on Top
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Image.asset(
                   imagePath,
-                  width: 100,
-                  height: 100,
+                  width: 250,
+                  height: 180,
                   fit: BoxFit.cover,
                 ),
               ),
-
-              const SizedBox(width: 16),
-
-              // Text
-              Expanded(
+      
+              /// Text Section
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+      
+                    /// Title (1 line only)
                     Text(
                       title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 6),
+      
+                    const SizedBox(height: 8),
+      
+                    // / Description (2 lines max)
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodySmall,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
-
-              // const Icon(Icons.chevron_right),
             ],
           ),
         ),
