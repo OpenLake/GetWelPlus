@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/pages/homepage.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
@@ -16,8 +16,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         // Loading
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -26,8 +26,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
           );
         }
 
+        // Check if user is logged in
+        final session = snapshot.hasData ? snapshot.data!.session : null;
+
         // Logged in
-        if (snapshot.hasData) {
+        if (session != null) {
           return const HomePage();
         }
 
