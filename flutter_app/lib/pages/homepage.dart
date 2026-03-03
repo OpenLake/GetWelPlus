@@ -207,12 +207,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                       },
                     ),
                     FeatureCard(
-                      imagePath: 'assets/images/meditation.jpg',
-                      title: 'Guided Meditation',
-                      subtitle: 'Relax your mind in just a few minutes',
-                      onTap: () {},
-                    ),
-                    FeatureCard(
                       imagePath: 'assets/images/book_a_slot.jpg',
                       title: 'Book a Session',
                       subtitle: 'Meet a mental health professional offline',
@@ -245,12 +239,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         );
                       },
-                    ),
-                    FeatureCard(
-                      imagePath: 'assets/images/music.jpg',
-                      title: 'Calm Music',
-                      subtitle: 'Soothing sounds to relax your mind',
-                      onTap: () {},
                     ),
                   ],
                 ),
