@@ -150,12 +150,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${getGreeting()}, $name 👋',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w600, fontSize: 23),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${getGreeting()} 👋',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600, fontSize: 26),
+                        ),
+                        Text(
+                          name,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600, fontSize: 28),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
                     // Feature List
                     FeatureCard(

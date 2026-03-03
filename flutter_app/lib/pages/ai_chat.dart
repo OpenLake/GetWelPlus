@@ -55,7 +55,7 @@ class _AiChatPageState extends State<AiChatPage> {
       appBar: AppBar(
         title: const Text("AI Chat"),
         centerTitle: true,
-        elevation: 1,
+        elevation: 4,
       ),
       body: SafeArea(
         child: Column(
