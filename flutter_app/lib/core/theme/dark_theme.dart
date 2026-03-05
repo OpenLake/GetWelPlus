@@ -6,7 +6,7 @@ class DarkTheme {
     brightness: Brightness.dark,
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
+      seedColor: Colors.green,
       brightness: Brightness.dark,
     ),
     textTheme: GoogleFonts.sonoTextTheme(

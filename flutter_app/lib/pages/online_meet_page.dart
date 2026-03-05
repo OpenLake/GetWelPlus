@@ -298,23 +298,51 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
           controller: _tabController,
           children: [
             // Scheduled tab
-            ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _scheduled.length,
-              itemBuilder: (context, index) => MeetingCard(
-                meeting: _scheduled[index],
-                onTap: () {},
-              ),
-            ),
+            _scheduled.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.event_busy_outlined, size: 52, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'No upcoming meetings',
+                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _scheduled.length,
+                    itemBuilder: (context, index) => MeetingCard(
+                      meeting: _scheduled[index],
+                      onTap: () {},
+                    ),
+                  ),
             // Attended tab
-            ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _attended.length,
-              itemBuilder: (context, index) => MeetingCard(
-                meeting: _attended[index],
-                onTap: () {},
-              ),
-            ),
+              _attended.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.event_busy_outlined, size: 52, color: Colors.grey),
+                          SizedBox(height: 12),
+                          Text(
+                            'No past meetings yet',
+                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _attended.length,
+                      itemBuilder: (context, index) => MeetingCard(
+                        meeting: _attended[index],
+                        onTap: () {},
+                      ),
+                    ),
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
