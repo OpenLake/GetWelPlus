@@ -4,6 +4,8 @@ import 'package:flutter_app/pages/homepage.dart';
 import 'package:flutter_app/pages/onboarding_page.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
+import 'package:flutter_app/pages/admin_dashboard.dart';
+import 'package:flutter_app/auth/auth_service.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -16,6 +18,31 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool showLogin = false;
   bool? _onboardingComplete;
   bool _checkingOnboarding = false;
+  bool? _isAdmin;
+  bool _checkingAdmin = false;
+
+  Future<void> _checkAdminStatus(String userId) async {
+    if (_checkingAdmin) return;
+    _checkingAdmin = true;
+
+    try {
+      final authService = AuthService();
+      final adminCheck = await authService.isAdmin(userId);
+      if (mounted) {
+        setState(() {
+          _isAdmin = adminCheck;
+          _checkingAdmin = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+          _checkingAdmin = false;
+        });
+      }
+    }
+  }
 
   Future<void> _checkOnboardingStatus(String userId) async {
     if (_checkingOnboarding) return;
@@ -35,7 +62,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
       }
     } catch (e) {
-      // table might not exist yet or other error, show onboarding
       if (mounted) {
         setState(() {
           _onboardingComplete = false;
@@ -62,9 +88,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         final session = snapshot.hasData ? snapshot.data!.session : null;
 
-        // logged in
         if (session != null) {
-          // check onboarding status
+          if (_isAdmin == null && !_checkingAdmin) {
+            _checkAdminStatus(session.user.id);
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (_isAdmin == null) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (_isAdmin == true) {
+            return const AdminDashboard();
+          }
+
           if (_onboardingComplete == null && !_checkingOnboarding) {
             _checkOnboardingStatus(session.user.id);
             return const Scaffold(
@@ -72,28 +113,27 @@ class _AuthWrapperState extends State<AuthWrapper> {
             );
           }
 
-          // still checking
           if (_onboardingComplete == null) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          // needs onboarding
           if (_onboardingComplete == false) {
             return OnboardingPage(onComplete: _completeOnboarding);
           }
 
-          // all good, go to home
           return const HomePage();
         }
 
-        // reset onboarding check when logged out
         if (_onboardingComplete != null) {
           _onboardingComplete = null;
         }
 
-        // logged out - show login or signup
+        if (_isAdmin != null) {
+          _isAdmin = null;
+        }
+
         return showLogin
             ? LoginPage(onSwitch: () => setState(() => showLogin = false))
             : SignupPage(onSwitch: () => setState(() => showLogin = true));

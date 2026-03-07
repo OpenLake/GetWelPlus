@@ -90,7 +90,6 @@ class AuthService {
         accessToken: accessToken,
       );
 
-      // Create user profile if it doesn't exist
       if (response.user != null) {
         final existingUser = await _supabase
             .from('users')
@@ -155,6 +154,21 @@ class AuthService {
       await _supabase.auth.resetPasswordForEmail(email);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Check if user is an admin
+  Future<bool> isAdmin(String userId) async {
+    try {
+      final response = await _supabase
+          .from('admins')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      return false;
     }
   }
 }
