@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/auth/auth_service.dart';
 import 'package:flutter_app/pages/past_meetings_page.dart';
+import 'package:flutter_app/pages/patient_list_page.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
 import 'package:flutter_app/pages/meeting_requests_page.dart';
 import 'package:flutter_app/pages/scheduled_meetings_page.dart';
@@ -110,7 +111,7 @@ class AdminDashboard extends StatelessWidget {
                 imagePath: 'assets/images/mood.jpg',
                 title: 'Patient List',
                 subtitle: 'View and manage your patients',
-                onTap: () {},
+                onTap: ()=> Navigator.push(context, MaterialPageRoute(builder:(_) => const PatientListPage())),
               ),
             ],
           ),
