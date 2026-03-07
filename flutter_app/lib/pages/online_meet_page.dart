@@ -15,25 +15,38 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
 
   late TabController _tabController;
   final List<Meeting> _allMeetings = [
+
     Meeting(
       title: 'Session with Dr. Mehta',
+      patientName: 'John Doe',
       scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
       notes: 'Follow-up on anxiety management',
+      status: 'confirmed',
     ),
     Meeting(
-      title: 'Group Therapy',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 10)),
-      notes: 'Weekly group session',
+      title: 'Session with Dr. Mehta',
+      patientName: 'John Doe',
+      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      notes: 'Follow-up on anxiety management',
+      status: 'confirmed',
     ),
     Meeting(
-      title: 'Session with Dr. Rao',
-      scheduledAt: DateTime.now().add(const Duration(days: 2)),
-      notes: 'First consultation',
+      title: 'Session with Dr. Mehta',
+      patientName: 'John Doe',
+      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      notes: 'Follow-up on anxiety management',
+      status: 'confirmed',
     ),
     Meeting(
-      title: 'Stress Management Workshop',
-      scheduledAt: DateTime.now().add(const Duration(days: 7)),
-      notes: 'Bring journal',
+      title: 'Session with Dr. Mehta',
+      patientName: 'John Doe',
+      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      notes: 'Follow-up on anxiety management',
+      status: 'confirmed',
     ),
   ];
 
@@ -227,11 +240,14 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                                   setState(() {
                                     _allMeetings.add(
                                       Meeting(
-                                        title: _titleController.text.trim().isEmpty 
-                                            ? 'My Session'          // ← fallback if user leaves it empty
+                                        title: _titleController.text.trim().isEmpty
+                                            ? 'My Session'
                                             : _titleController.text.trim(),
+                                        patientName: 'Me',
                                         scheduledAt: _selectedDateTime!,
+                                        createdAt: DateTime.now(),
                                         notes: _notesController.text.trim(),
+                                        status: 'pending',
                                       ),
                                     );
                                   });
