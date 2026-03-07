@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/auth/auth_service.dart';
+import 'package:flutter_app/pages/past_meetings_page.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
 import 'package:flutter_app/pages/meeting_requests_page.dart';
+import 'package:flutter_app/pages/scheduled_meetings_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -96,13 +98,13 @@ class AdminDashboard extends StatelessWidget {
                 imagePath: 'assets/images/book_a_slot.jpg',
                 title: 'Scheduled Meetings',
                 subtitle: 'View your upcoming confirmed meetings',
-                onTap: () {},
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_)=> const ScheduledMeetingsPage())),
               ),
               FeatureCard(
                 imagePath: 'assets/images/articles.jpg',
                 title: 'Past Meetings',
                 subtitle: 'View history of completed sessions',
-                onTap: () {},
+                onTap: () => Navigator.push(context,  MaterialPageRoute(builder: (_)=> const PastMeetingsPage())),
               ),
               FeatureCard(
                 imagePath: 'assets/images/mood.jpg',
