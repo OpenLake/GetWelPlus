@@ -244,17 +244,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ],
                 ),
               ),
-        floatingActionButton: FloatingActionButton(
-          shape: const CircleBorder(),
-          foregroundColor: Colors.black,
-          backgroundColor: Colors.green,
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiChatPage()),
             );
           },
-          child: const Text("AI", style: TextStyle(fontSize: 27)),
+          backgroundColor: const Color(0xFF4CAF50),
+          foregroundColor: Colors.white,
+          elevation: 6,
+          icon: const CircleAvatar(
+            radius: 14,
+            backgroundColor: Colors.white,
+            child: Text('M', style: TextStyle(color: Color(0xFF4CAF50), fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          label: const Text('Chat with Maya', style: TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
     );
