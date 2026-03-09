@@ -20,9 +20,9 @@ class _AiChatPageState extends State<AiChatPage> {
   @override
   void initState() {
     super.initState();
-    // greet the user when they open chat
+    // maya greets the user
     _messages.add({
-      "text": "Hey there! How are you feeling today? I'm here to chat. 💚",
+      "text": "Hey! I'm Maya 💚 Think of me as your friend who's always here to listen. How's your day going?",
       "isUser": false,
     });
   }
@@ -67,7 +67,7 @@ class _AiChatPageState extends State<AiChatPage> {
       if (mounted) {
         setState(() {
           _messages.add({
-            "text": "Oops, something went wrong. Check your connection?",
+            "text": "Hmm, I'm having trouble connecting right now. Mind trying again in a sec? 🙏",
             "isUser": false,
           });
           _isLoading = false;
@@ -91,20 +91,30 @@ class _AiChatPageState extends State<AiChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("AI Chat"),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.green.shade100,
+              child: const Text('M', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 10),
+            const Text("Maya"),
+          ],
+        ),
         centerTitle: true,
         elevation: 4,
         actions: [
-          // reset chat button
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Start over',
+            tooltip: 'Start fresh',
             onPressed: () {
               setState(() {
                 _chatService.clearHistory();
                 _messages.clear();
                 _messages.add({
-                  "text": "Hey there! How are you feeling today? I'm here to chat. 💚",
+                  "text": "Fresh start! 🌱 What's on your mind?",
                   "isUser": false,
                 });
               });
@@ -123,23 +133,20 @@ class _AiChatPageState extends State<AiChatPage> {
                   controller: _scrollController,
                   itemCount: _messages.length + (_isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
-                    // typing indicator when waiting for response
+                    // maya is typing indicator
                     if (index == _messages.length && _isLoading) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Row(
                           children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.green,
-                              ),
+                            CircleAvatar(
+                              radius: 12,
+                              backgroundColor: Colors.green.shade100,
+                              child: const Text('M', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
                             ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Thinking...',
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Maya is typing...',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontStyle: FontStyle.italic,
