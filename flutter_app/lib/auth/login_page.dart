@@ -17,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final pass = TextEditingController();
   final formkey = GlobalKey<FormState>();
   final authService = AuthService();
+  bool isAdminLogin = false;
   String? errorMessage;
   bool isLoading = false;
 
@@ -42,21 +43,42 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     try {
-      await authService.signIn(
+      final response = await authService.signIn(
         email: email.text.trim(),
         password: pass.text.trim(),
       );
-      // Navigation handled by AuthWrapper
+
+      if (isAdminLogin) {
+        final adminCheck = await authService.isAdmin(response.user!.id);
+
+        if (!adminCheck) {
+          await authService.signOut();
+          if (mounted) {
+            setState(() {
+              errorMessage = 'You are not authorized as an admin';
+              isLoading = false;
+            });
+          }
+          return;
+        }
+        // admin routing handled by AuthWrapper
+      }
+      // user routing handled by AuthWrapper
+
     } on AuthException catch (e) {
-      setState(() {
-        errorMessage = e.message;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = e.message;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        errorMessage = 'Login failed. Please try again.';
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Login failed. Please try again.';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -74,7 +96,6 @@ class _LoginPageState extends State<LoginPage> {
           isLoading = false;
         });
       }
-      // Navigation handled by AuthWrapper
     } on AuthException catch (e) {
       setState(() {
         errorMessage = 'Google sign-in failed: ${e.message}';
@@ -98,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
             key: formkey,
             child: Column(
               children: [
-                const SizedBox(height: 140),
+                const SizedBox(height: 120),
                 RichText(
                   text: const TextSpan(
                     style: TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
@@ -111,6 +132,70 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // Toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => isAdminLogin = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: !isAdminLogin
+                                  ? const Color(0xFF4CAF50)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'User',
+                                style: TextStyle(
+                                  color: !isAdminLogin
+                                      ? Colors.black
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => isAdminLogin = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isAdminLogin
+                                  ? const Color(0xFF4CAF50)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Admin',
+                                style: TextStyle(
+                                  color: isAdminLogin
+                                      ? Colors.black
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 30),
                 Inputfield(hint_text: "Email", controller: email),
                 const SizedBox(height: 20),
@@ -130,13 +215,12 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(color: Colors.red, fontSize: 14),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
                 const Text(
                   "OR",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 20),
-                // Google Sign-In Button
+                const SizedBox(height: 15),
                 isLoading
                     ? const SizedBox.shrink()
                     : OutlinedButton.icon(
@@ -165,9 +249,9 @@ class _LoginPageState extends State<LoginPage> {
                         label: const Text(
                           "Sign in with Google",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black,
+                            color: Colors.white,
                           ),
                         ),
                       ),
