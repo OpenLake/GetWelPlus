@@ -1,66 +1,91 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/widgets/option_tile.dart';
 
-// All 20 questions, grouped by DSM-5 domain
 class _Question {
   final String domain;
   final String text;
   const _Question(this.domain, this.text);
 }
 
-const List<_Question> _questions = [
-  // Intrusive symptoms — flashbacks, nightmares, unwanted memories
-  _Question('Intrusive Symptoms',
-      'I have unwanted, distressing memories or mental images of stressful events.'),
-  _Question('Intrusive Symptoms',
-      'I experience distressing dreams or nightmares related to stressful situations.'),
-  _Question('Intrusive Symptoms',
-      'Flashbacks or vivid recollections of stressful events suddenly intrude on my day.'),
+// Full question bank — each domain has more questions than we ever show.
+// Every session randomly draws _pickCounts[domain] questions from each pool,
+// so the test feels fresh every time while keeping balanced DSM-5 coverage.
+const Map<String, List<String>> _questionBank = {
+  'Intrusive Symptoms': [
+    'I have unwanted, distressing memories or mental images of stressful events.',
+    'I experience distressing dreams or nightmares related to stressful situations.',
+    'Flashbacks or vivid recollections of stressful events suddenly intrude on my day.',
+    'I find myself mentally replaying upsetting events even when I don\'t want to.',
+    'Certain sights, sounds, or smells unexpectedly trigger stressful memories.',
+    'I feel strong emotional or physical distress when reminded of past stressors.',
+  ],
+  'Negative Mood & Cognition': [
+    'I feel persistent negative emotions such as fear, horror, anger, guilt, or shame.',
+    'I have difficulty concentrating or making decisions because of stress.',
+    'I feel detached or estranged from people around me.',
+    'I am unable to experience positive emotions like happiness, satisfaction, or love.',
+    'I tend to blame myself for things that have gone wrong in my life.',
+    'I feel like nothing good will happen to me in the future.',
+    'I find it hard to remember important details of stressful events.',
+  ],
+  'Dissociative Symptoms': [
+    'I feel emotionally numb or cut off from my own thoughts and feelings.',
+    'The world around me feels unreal, dreamlike, or distorted.',
+    'I lose track of time and find myself in situations I don\'t remember getting into.',
+    'I feel like I\'m watching myself from outside my own body.',
+    'My sense of who I am feels unstable or unclear when I\'m under stress.',
+  ],
+  'Avoidance': [
+    'I avoid thoughts, feelings, or internal reminders associated with stressful events.',
+    'I avoid people, places, or situations that remind me of stress.',
+    'I stay away from news, conversations, or media that could remind me of stressors.',
+    'I keep myself constantly busy so I don\'t have to think about what\'s bothering me.',
+    'I find it difficult to open up about stress, even with people I trust.',
+  ],
+  'Arousal & Reactivity': [
+    'I have trouble falling or staying asleep due to stress.',
+    'I feel unusually irritable or experience sudden angry outbursts.',
+    'I am constantly on alert, watching for potential danger (hypervigilance).',
+    'I am easily startled by unexpected noises or sudden movements.',
+    'I engage in reckless or self-destructive behaviour when I\'m stressed.',
+    'I feel physically tense or wound up most of the time.',
+    'I have difficulty relaxing, even when I\'m objectively safe.',
+  ],
+  'Functional Impairment': [
+    'Stress has significantly affected my work, school, or daily responsibilities.',
+    'Stress has interfered with my personal relationships or social activities.',
+    'I experience physical symptoms of stress such as headaches, muscle tension, or fatigue.',
+    'I feel overwhelmed and unable to cope with everyday demands.',
+    'Overall, stress is having a significant negative impact on my quality of life.',
+    'I have been withdrawing from hobbies or activities I used to enjoy.',
+    'I feel like stress is controlling my life rather than me controlling it.',
+    'I have been neglecting basic self-care (eating, exercise, sleep) because of stress.',
+  ],
+};
 
-  // Negative mood & thinking patterns
-  _Question('Negative Mood & Cognition',
-      'I feel persistent negative emotions such as fear, horror, anger, guilt, or shame.'),
-  _Question('Negative Mood & Cognition',
-      'I have difficulty concentrating or making decisions because of stress.'),
-  _Question('Negative Mood & Cognition',
-      'I feel detached or estranged from people around me.'),
-  _Question('Negative Mood & Cognition',
-      'I am unable to experience positive emotions like happiness, satisfaction, or love.'),
+// How many questions to draw from each domain per session (total = 20, max score = 80)
+const Map<String, int> _pickCounts = {
+  'Intrusive Symptoms': 3,
+  'Negative Mood & Cognition': 4,
+  'Dissociative Symptoms': 2,
+  'Avoidance': 2,
+  'Arousal & Reactivity': 4,
+  'Functional Impairment': 5,
+};
 
-  // Feeling disconnected or detached from reality
-  _Question('Dissociative Symptoms',
-      'I feel emotionally numb or cut off from my own thoughts and feelings.'),
-  _Question('Dissociative Symptoms',
-      'The world around me feels unreal, dreamlike, or distorted.'),
-
-  // Actively avoiding reminders of stressful events
-  _Question('Avoidance',
-      'I avoid thoughts, feelings, or internal reminders associated with stressful events.'),
-  _Question('Avoidance',
-      'I avoid people, places, activities, or situations that remind me of stress.'),
-
-  // On edge — sleep issues, irritability, hypervigilance
-  _Question('Arousal & Reactivity',
-      'I have trouble falling or staying asleep due to stress.'),
-  _Question('Arousal & Reactivity',
-      'I feel unusually irritable or experience sudden angry outbursts.'),
-  _Question('Arousal & Reactivity',
-      'I am constantly on alert and watch for potential danger (hypervigilance).'),
-  _Question('Arousal & Reactivity',
-      'I am easily startled by unexpected noises or events.'),
-
-  // How much stress is actually getting in the way of daily life
-  _Question('Functional Impairment',
-      'Stress has significantly affected my work, school, or daily responsibilities.'),
-  _Question('Functional Impairment',
-      'Stress has interfered with my personal relationships or social activities.'),
-  _Question('Functional Impairment',
-      'I experience physical stress symptoms such as headaches, muscle tension, or fatigue.'),
-  _Question('Functional Impairment',
-      'I feel overwhelmed and unable to cope with everyday demands.'),
-  _Question('Functional Impairment',
-      'Overall, stress is having a significant negative impact on my quality of life.'),
-];
+List<_Question> _generateQuestions() {
+  final rng = Random();
+  final result = <_Question>[];
+  _questionBank.forEach((domain, pool) {
+    final count = _pickCounts[domain] ?? pool.length;
+    final shuffled = List<String>.from(pool)..shuffle(rng);
+    for (int i = 0; i < count && i < shuffled.length; i++) {
+      result.add(_Question(domain, shuffled[i]));
+    }
+  });
+  return result;
+}
 
 const List<String> _optionLabels = [
   'Never',
@@ -181,9 +206,16 @@ class StressCheckPage extends StatefulWidget {
 
 class _StressCheckPageState extends State<StressCheckPage> {
   int _currentIndex = 0;
-  // -1 = not yet answered for that question
-  final List<int> _answers = List.filled(_questions.length, -1);
+  late List<_Question> _sessionQuestions;
+  late List<int> _answers; // -1 = not yet answered
   bool _submitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionQuestions = _generateQuestions();
+    _answers = List.filled(_sessionQuestions.length, -1);
+  }
 
   int get _totalScore =>
       _answers.fold(0, (sum, v) => sum + (v == -1 ? 0 : v));
@@ -191,7 +223,7 @@ class _StressCheckPageState extends State<StressCheckPage> {
   bool get _currentAnswered => _answers[_currentIndex] != -1;
 
   void _goNext() {
-    if (_currentIndex < _questions.length - 1) {
+    if (_currentIndex < _sessionQuestions.length - 1) {
       setState(() => _currentIndex++);
     } else {
       setState(() => _submitted = true);
@@ -205,16 +237,17 @@ class _StressCheckPageState extends State<StressCheckPage> {
   void _restart() {
     setState(() {
       _currentIndex = 0;
-      _answers.fillRange(0, _answers.length, -1);
+      _sessionQuestions = _generateQuestions(); // fresh draw every time
+      _answers = List.filled(_sessionQuestions.length, -1);
       _submitted = false;
     });
   }
 
   // Builds the single-question view with progress and nav buttons
   Widget _buildQuestion(BuildContext context) {
-    final q = _questions[_currentIndex];
+    final q = _sessionQuestions[_currentIndex];
     final scheme = Theme.of(context).colorScheme;
-    final progress = (_currentIndex + 1) / _questions.length;
+    final progress = (_currentIndex + 1) / _sessionQuestions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +268,7 @@ class _StressCheckPageState extends State<StressCheckPage> {
             ),
             const SizedBox(width: 12),
             Text(
-              '${_currentIndex + 1} / ${_questions.length}',
+              '${_currentIndex + 1} / ${_sessionQuestions.length}',
               style: Theme.of(context)
                   .textTheme
                   .labelLarge
@@ -314,10 +347,10 @@ class _StressCheckPageState extends State<StressCheckPage> {
 
             ElevatedButton.icon(
               onPressed: _currentAnswered ? _goNext : null,
-              icon: Icon(_currentIndex == _questions.length - 1
+              icon: Icon(_currentIndex == _sessionQuestions.length - 1
                   ? Icons.check_circle_rounded
                   : Icons.arrow_forward_rounded),
-              label: Text(_currentIndex == _questions.length - 1
+              label: Text(_currentIndex == _sessionQuestions.length - 1
                   ? 'See Results'
                   : 'Next'),
               style: ElevatedButton.styleFrom(
@@ -357,8 +390,8 @@ class _StressCheckPageState extends State<StressCheckPage> {
     // Tally scores per domain for the breakdown bars
     final domainScores = <String, int>{};
     final domainCounts = <String, int>{};
-    for (int i = 0; i < _questions.length; i++) {
-      final d = _questions[i].domain;
+    for (int i = 0; i < _sessionQuestions.length; i++) {
+      final d = _sessionQuestions[i].domain;
       domainScores[d] = (domainScores[d] ?? 0) + (_answers[i] == -1 ? 0 : _answers[i]);
       domainCounts[d] = (domainCounts[d] ?? 0) + 1;
     }
