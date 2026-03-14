@@ -46,15 +46,10 @@ class MeetingRequestCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                Text(
-                  DateFormat('MMM d, h:mm a').format(meeting.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: Colors.grey),
-                ),
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             const Divider(),
             const SizedBox(height: 8),
 

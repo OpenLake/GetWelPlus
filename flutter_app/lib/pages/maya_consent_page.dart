@@ -48,12 +48,14 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
-              // maya avatar
+              const SizedBox(height: 40),
+
+              // Maya avatar
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -93,7 +95,7 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
 
               const SizedBox(height: 32),
 
-              // main question card
+              // Main question card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -131,9 +133,9 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // privacy assurance
+              // Privacy assurance
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -142,7 +144,8 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.lock_outline, color: colorScheme.primary, size: 20),
+                    Icon(Icons.lock_outline,
+                        color: colorScheme.primary, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -157,9 +160,9 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 40),
 
-              // buttons
+              // Buttons
               if (_isLoading)
                 const CircularProgressIndicator()
               else
@@ -175,7 +178,8 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
                         ),
                         child: const Text(
                           'Yes, personalize my experience',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -200,7 +204,7 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
                   ],
                 ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
             ],
           ),
         ),

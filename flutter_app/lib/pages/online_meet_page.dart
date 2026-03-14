@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/meeting_model.dart';
 import 'package:flutter_app/widgets/meeting_card.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_app/pages/doctor_chat_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OnlineMeetPage extends StatefulWidget {
   const OnlineMeetPage({super.key});
@@ -15,50 +17,51 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
 
   late TabController _tabController;
   final List<Meeting> _allMeetings = [
-
     Meeting(
       title: 'Session with Dr. Mehta',
       patientName: 'John Doe',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
+      scheduledAt: DateTime.now(),
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
       notes: 'Follow-up on anxiety management',
       status: 'confirmed',
+      meetingType: 'video',
     ),
     Meeting(
-      title: 'Session with Dr. Mehta',
+      title: 'Stress Check Session',
       patientName: 'John Doe',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      notes: 'Follow-up on anxiety management',
-      status: 'confirmed',
+      scheduledAt: DateTime.now().add(const Duration(days: 2)),
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      notes: 'Initial stress assessment',
+      status: 'pending',
+      meetingType: 'chat',
     ),
     Meeting(
-      title: 'Session with Dr. Mehta',
+      title: 'Group Therapy',
       patientName: 'John Doe',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      notes: 'Follow-up on anxiety management',
+      scheduledAt: DateTime.now().add(const Duration(minutes: 4)),
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      notes: 'Weekly group session',
       status: 'confirmed',
-    ),
-    Meeting(
-      title: 'Session with Dr. Mehta',
-      patientName: 'John Doe',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      notes: 'Follow-up on anxiety management',
-      status: 'confirmed',
+      meetingType: 'chat',
     ),
   ];
 
-  List<Meeting> get _scheduled => _allMeetings.where((m) => !m.isAttended).toList();
-  List<Meeting> get _attended => _allMeetings.where((m) => m.isAttended).toList();
+  List<Meeting> get _attended => _allMeetings
+      .where((m) => m.isAttended && m.status != 'cancelled')
+      .toList();
+
+  List<Meeting> get _scheduled => _allMeetings
+      .where((m) => !m.isAttended || m.status == 'cancelled')
+      .toList();
 
   DateTime? _selectedDateTime;
+  String _selectedMeetingType = 'video'; // NEW
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
   void _showScheduleSheet() {
-    _selectedDateTime=null;
+    _selectedDateTime = null;
+    _selectedMeetingType = 'video'; // reset to default
     _notesController.clear();
     _titleController.clear();
 
@@ -75,16 +78,18 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
           builder: (context, setSheetState) {
             return SafeArea(
               child: Padding(
-                  padding: EdgeInsets.only(
-                    left: 24,
-                    right: 24,
-                    top: 24,
-                    bottom: MediaQuery.of(context).viewInsets.bottom+20,
-                  ),
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Drag handle
                       Center(
                         child: Container(
                           width: 40,
@@ -105,26 +110,28 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 24),
-                
+                  
                       // Date & Time picker
                       GestureDetector(
                         onTap: () async {
                           final date = await showDatePicker(
                             context: context,
-                            initialDate: DateTime.now().add(const Duration(days: 1)),
+                            initialDate:
+                                DateTime.now().add(const Duration(days: 1)),
                             firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
                           );
-                
+                  
                           if (date == null || !mounted) return;
-                
+                  
                           final time = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.now(),
                           );
-                
+                  
                           if (time == null || !mounted) return;
-                
+                  
                           setSheetState(() {
                             _selectedDateTime = DateTime(
                               date.year,
@@ -153,7 +160,8 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                               const SizedBox(width: 12),
                               Text(
                                 _selectedDateTime != null
-                                    ? DateFormat('MMM d, yyyy · h:mm a').format(_selectedDateTime!)
+                                    ? DateFormat('MMM d, yyyy · h:mm a')
+                                        .format(_selectedDateTime!)
                                     : 'Select Date & Time',
                                 style: TextStyle(
                                   color: _selectedDateTime != null
@@ -167,7 +175,8 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-
+                  
+                      // Title field
                       TextField(
                         controller: _titleController,
                         style: const TextStyle(color: Colors.white),
@@ -179,24 +188,79 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                           fillColor: const Color(0xFF2A2A2A),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade700),
+                            borderSide:
+                                BorderSide(color: Colors.grey.shade700),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
                               color: _titleController.text.isNotEmpty
-                                  ? const Color(0xFF4CAF50)  // ← green when filled
-                                  : Colors.grey.shade700,     // ← grey when empty
+                                  ? const Color(0xFF4CAF50)
+                                  : Colors.grey.shade700,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF4CAF50)),
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                
+                  
+                      // Meeting type dropdown — NEW
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A2A),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF4CAF50)),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedMeetingType,
+                            dropdownColor: const Color(0xFF2A2A2A),
+                            iconEnabledColor: const Color(0xFF4CAF50),
+                            isExpanded: true,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 15),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'video',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.videocam_outlined,
+                                        color: Color(0xFF4CAF50), size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Video Call'),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'chat',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.chat_outlined,
+                                        color: Color(0xFF4CAF50), size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Chat'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setSheetState(() {
+                                _selectedMeetingType = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                  
+                      // Notes field
                       TextField(
                         controller: _notesController,
                         style: const TextStyle(color: Colors.white),
@@ -208,20 +272,24 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                           fillColor: const Color(0xFF2A2A2A),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade700),
+                            borderSide:
+                                BorderSide(color: Colors.grey.shade700),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade700),
+                            borderSide:
+                                BorderSide(color: Colors.grey.shade700),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF4CAF50)),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-              
+                  
+                      // Submit button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -240,7 +308,9 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                                   setState(() {
                                     _allMeetings.add(
                                       Meeting(
-                                        title: _titleController.text.trim().isEmpty
+                                        title: _titleController.text
+                                                .trim()
+                                                .isEmpty
                                             ? 'My Session'
                                             : _titleController.text.trim(),
                                         patientName: 'Me',
@@ -248,6 +318,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                                         createdAt: DateTime.now(),
                                         notes: _notesController.text.trim(),
                                         status: 'pending',
+                                        meetingType: _selectedMeetingType, // NEW
                                       ),
                                     );
                                   });
@@ -264,6 +335,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                       ),
                     ],
                   ),
+                ),
               ),
             );
           },
@@ -277,13 +349,13 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _titleController.addListener(() {
-        setState(() {}); // rebuilds when title text changes
-      });
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose(); // always dispose to free memory
+    _tabController.dispose();
     _notesController.dispose();
     _titleController.dispose();
     super.dispose();
@@ -319,11 +391,13 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.event_busy_outlined, size: 52, color: Colors.grey),
+                        Icon(Icons.event_busy_outlined,
+                            size: 52, color: Colors.grey),
                         SizedBox(height: 12),
                         Text(
                           'No upcoming meetings',
-                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                          style:
+                              TextStyle(color: Colors.grey, fontSize: 15),
                         ),
                       ],
                     ),
@@ -331,34 +405,84 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _scheduled.length,
+                    itemBuilder: (context, index) {
+                      final meeting = _scheduled[index];
+                      return MeetingCard(
+                        meeting: meeting,
+                        onTap: () {},
+                        onCancel: () {
+                          setState(() {
+                            final actual = _allMeetings.indexOf(meeting);
+                            _allMeetings[actual] = Meeting(
+                              title: meeting.title,
+                              patientName: meeting.patientName,
+                              scheduledAt: meeting.scheduledAt,
+                              createdAt: meeting.createdAt,
+                              notes: meeting.notes,
+                              status: 'cancelled',
+                              meetingType: meeting.meetingType, // preserved
+                            );
+                          });
+                        },
+                        onJoin: () async {
+                          if (meeting.isChat) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const DoctorChatPage(),
+                              ),
+                            );
+                          } else {
+                            final url = Uri.parse(
+                              'https://meet.jit.si/${meeting.jitsiRoom}',
+                            );
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(
+                                url,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Could not open video call'),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      );
+                    },
+                  ),
+
+            // Attended tab
+            _attended.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.event_busy_outlined,
+                            size: 52, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'No past meetings yet',
+                          style:
+                              TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _attended.length,
                     itemBuilder: (context, index) => MeetingCard(
-                      meeting: _scheduled[index],
+                      meeting: _attended[index],
                       onTap: () {},
+                      onCancel: null,
+                      onJoin: null,
                     ),
                   ),
-            // Attended tab
-              _attended.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.event_busy_outlined, size: 52, color: Colors.grey),
-                          SizedBox(height: 12),
-                          Text(
-                            'No past meetings yet',
-                            style: TextStyle(color: Colors.grey, fontSize: 15),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _attended.length,
-                      itemBuilder: (context, index) => MeetingCard(
-                        meeting: _attended[index],
-                        onTap: () {},
-                      ),
-                    ),
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
