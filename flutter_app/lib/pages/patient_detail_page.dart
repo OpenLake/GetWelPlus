@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/patient_model.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
+import 'package:flutter_app/pages/past_interactions_page.dart';
 
 class PatientDetailPage extends StatelessWidget {
   final Patient patient;
@@ -81,12 +82,22 @@ class PatientDetailPage extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              FeatureCard(
+FeatureCard(
                 imagePath: 'assets/images/articles.jpg',
                 title: 'Past Interactions',
                 subtitle: 'View all previous sessions and notes',
                 onTap: () {
-                  // TODO: navigate to past interactions page later
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PastInteractionsPage(
+                        patientId: patient.id,
+                        patientDisplayId: patient.displayId.isNotEmpty
+                            ? patient.displayId
+                            : patient.name,
+                      ),
+                    ),
+                  );
                 },
               ),
             ],
