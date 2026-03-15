@@ -4,6 +4,7 @@ import 'package:flutter_app/widgets/meeting_card.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_app/pages/doctor_chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OnlineMeetPage extends StatefulWidget {
   const OnlineMeetPage({super.key});
@@ -16,35 +17,10 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
     with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
-  final List<Meeting> _allMeetings = [
-    Meeting(
-      title: 'Session with Dr. Mehta',
-      patientName: 'John Doe',
-      scheduledAt: DateTime.now(),
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      notes: 'Follow-up on anxiety management',
-      status: 'confirmed',
-      meetingType: 'video',
-    ),
-    Meeting(
-      title: 'Stress Check Session',
-      patientName: 'John Doe',
-      scheduledAt: DateTime.now().add(const Duration(days: 2)),
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      notes: 'Initial stress assessment',
-      status: 'pending',
-      meetingType: 'chat',
-    ),
-    Meeting(
-      title: 'Group Therapy',
-      patientName: 'John Doe',
-      scheduledAt: DateTime.now().add(const Duration(minutes: 4)),
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      notes: 'Weekly group session',
-      status: 'confirmed',
-      meetingType: 'chat',
-    ),
-  ];
+  List<Meeting> _allMeetings = [];
+  bool _isLoading = true;
+
+  final _supabase = Supabase.instance.client;
 
   List<Meeting> get _attended => _allMeetings
       .where((m) => m.isAttended && m.status != 'cancelled')
@@ -55,13 +31,87 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
       .toList();
 
   DateTime? _selectedDateTime;
-  String _selectedMeetingType = 'video'; // NEW
+  String _selectedMeetingType = 'video';
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
+  // Fetch all meetings for current user from Supabase
+  Future<void> _fetchMeetings() async {
+    setState(() => _isLoading = true);
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final response = await _supabase
+          .from('meetings')
+          .select('*, patient_profiles(display_id, full_name)')
+          .eq('patient_id', userId)
+          .order('scheduled_at', ascending: true);
+
+      setState(() {
+        _allMeetings = (response as List)
+            .map((json) => Meeting.fromJson(json))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching meetings: $e')),
+        );
+      }
+    }
+  }
+
+  // Insert new meeting into Supabase
+  Future<void> _scheduleMeeting() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || _selectedDateTime == null) return;
+
+    try {
+      await _supabase.from('meetings').insert({
+        'patient_id': userId,
+        'title': _titleController.text.trim().isEmpty
+            ? 'My Session'
+            : _titleController.text.trim(),
+        'notes': _notesController.text.trim(),
+        'scheduled_at': _selectedDateTime!.toIso8601String(),
+        'status': 'pending',
+        'meeting_type': _selectedMeetingType,
+      });
+
+      await _fetchMeetings(); // refresh list
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error scheduling meeting: $e')),
+        );
+      }
+    }
+  }
+
+  // Cancel a meeting in Supabase
+  Future<void> _cancelMeeting(Meeting meeting) async {
+    try {
+      await _supabase
+          .from('meetings')
+          .update({'status': 'cancelled'})
+          .eq('id', meeting.id);
+
+      await _fetchMeetings(); // refresh list
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cancelling meeting: $e')),
+        );
+      }
+    }
+  }
+
   void _showScheduleSheet() {
     _selectedDateTime = null;
-    _selectedMeetingType = 'video'; // reset to default
+    _selectedMeetingType = 'video';
     _notesController.clear();
     _titleController.clear();
 
@@ -110,7 +160,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 24),
-                  
+
                       // Date & Time picker
                       GestureDetector(
                         onTap: () async {
@@ -122,16 +172,16 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                             lastDate:
                                 DateTime.now().add(const Duration(days: 365)),
                           );
-                  
+
                           if (date == null || !mounted) return;
-                  
+
                           final time = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.now(),
                           );
-                  
+
                           if (time == null || !mounted) return;
-                  
+
                           setSheetState(() {
                             _selectedDateTime = DateTime(
                               date.year,
@@ -175,7 +225,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-                  
+
                       // Title field
                       TextField(
                         controller: _titleController,
@@ -207,8 +257,8 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-                  
-                      // Meeting type dropdown — NEW
+
+                      // Meeting type dropdown
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 4),
@@ -259,7 +309,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-                  
+
                       // Notes field
                       TextField(
                         controller: _notesController,
@@ -288,7 +338,7 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                         ),
                       ),
                       const SizedBox(height: 24),
-                  
+
                       // Submit button
                       SizedBox(
                         width: double.infinity,
@@ -304,25 +354,9 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
                           ),
                           onPressed: _selectedDateTime == null
                               ? null
-                              : () {
-                                  setState(() {
-                                    _allMeetings.add(
-                                      Meeting(
-                                        title: _titleController.text
-                                                .trim()
-                                                .isEmpty
-                                            ? 'My Session'
-                                            : _titleController.text.trim(),
-                                        patientName: 'Me',
-                                        scheduledAt: _selectedDateTime!,
-                                        createdAt: DateTime.now(),
-                                        notes: _notesController.text.trim(),
-                                        status: 'pending',
-                                        meetingType: _selectedMeetingType, // NEW
-                                      ),
-                                    );
-                                  });
+                              : () async {
                                   Navigator.pop(context);
+                                  await _scheduleMeeting();
                                 },
                           child: const Text(
                             'Schedule Meeting',
@@ -348,9 +382,8 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _titleController.addListener(() {
-      setState(() {});
-    });
+    _titleController.addListener(() => setState(() {}));
+    _fetchMeetings(); // load from Supabase on open
   }
 
   @override
@@ -382,109 +415,106 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            // Scheduled tab
-            _scheduled.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.event_busy_outlined,
-                            size: 52, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text(
-                          'No upcoming meetings',
-                          style:
-                              TextStyle(color: Colors.grey, fontSize: 15),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _scheduled.length,
-                    itemBuilder: (context, index) {
-                      final meeting = _scheduled[index];
-                      return MeetingCard(
-                        meeting: meeting,
-                        onTap: () {},
-                        onCancel: () {
-                          setState(() {
-                            final actual = _allMeetings.indexOf(meeting);
-                            _allMeetings[actual] = Meeting(
-                              title: meeting.title,
-                              patientName: meeting.patientName,
-                              scheduledAt: meeting.scheduledAt,
-                              createdAt: meeting.createdAt,
-                              notes: meeting.notes,
-                              status: 'cancelled',
-                              meetingType: meeting.meetingType, // preserved
-                            );
-                          });
-                        },
-                        onJoin: () async {
-                          if (meeting.isChat) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DoctorChatPage(),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF4CAF50),
+                ),
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  // Scheduled tab
+                  _scheduled.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.event_busy_outlined,
+                                  size: 52, color: Colors.grey),
+                              SizedBox(height: 12),
+                              Text(
+                                'No upcoming meetings',
+                                style: TextStyle(
+                                    color: Colors.grey, fontSize: 15),
                               ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _scheduled.length,
+                          itemBuilder: (context, index) {
+                            final meeting = _scheduled[index];
+                            return MeetingCard(
+                              meeting: meeting,
+                              onTap: () {},
+                              onCancel: () => _cancelMeeting(meeting),
+                              onJoin: () async {
+                                if (meeting.isChat) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => DoctorChatPage(
+                                        meetingId: meeting.id,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  final url = Uri.parse(
+                                    'https://meet.jit.si/${meeting.jitsiRoom}',
+                                  );
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(
+                                      url,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content:
+                                              Text('Could not open video call'),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
                             );
-                          } else {
-                            final url = Uri.parse(
-                              'https://meet.jit.si/${meeting.jitsiRoom}',
-                            );
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(
-                                url,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            } else {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Could not open video call'),
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        },
-                      );
-                    },
-                  ),
-
-            // Attended tab
-            _attended.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.event_busy_outlined,
-                            size: 52, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text(
-                          'No past meetings yet',
-                          style:
-                              TextStyle(color: Colors.grey, fontSize: 15),
+                          },
                         ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _attended.length,
-                    itemBuilder: (context, index) => MeetingCard(
-                      meeting: _attended[index],
-                      onTap: () {},
-                      onCancel: null,
-                      onJoin: null,
-                    ),
-                  ),
-          ],
-        ),
+
+                  // Attended tab
+                  _attended.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.event_busy_outlined,
+                                  size: 52, color: Colors.grey),
+                              SizedBox(height: 12),
+                              Text(
+                                'No past meetings yet',
+                                style: TextStyle(
+                                    color: Colors.grey, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _attended.length,
+                          itemBuilder: (context, index) => MeetingCard(
+                            meeting: _attended[index],
+                            onTap: () {},
+                            onCancel: null,
+                            onJoin: null,
+                          ),
+                        ),
+                ],
+              ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         floatingActionButton: FloatingActionButton(
           shape: const CircleBorder(),
