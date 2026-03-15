@@ -26,9 +26,9 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
       .where((m) => m.isAttended && m.status != 'cancelled')
       .toList();
 
-  List<Meeting> get _scheduled => _allMeetings
-      .where((m) => !m.isAttended || m.status == 'cancelled')
-      .toList();
+List<Meeting> get _scheduled => _allMeetings
+    .where((m) => !m.isAttended && m.status != 'cancelled')
+    .toList();
   List<Meeting> get _cancelled => _allMeetings
       .where((m) => m.status == 'cancelled')
       .toList();
