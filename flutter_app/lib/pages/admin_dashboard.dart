@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/auth/auth_service.dart';
+import 'package:flutter_app/pages/admin_maya_chat_page.dart';
 import 'package:flutter_app/pages/past_meetings_page.dart';
 import 'package:flutter_app/pages/patient_list_page.dart';
 import 'package:flutter_app/widgets/feature_card.dart';
@@ -114,6 +115,35 @@ class AdminDashboard extends StatelessWidget {
                 onTap: ()=> Navigator.push(context, MaterialPageRoute(builder:(_) => const PatientListPage())),
               ),
             ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AdminMayaChatPage(),
+              ),
+            );
+          },
+          backgroundColor: const Color(0xFF4CAF50),
+          foregroundColor: Colors.white,
+          elevation: 6,
+          icon: const CircleAvatar(
+            radius: 14,
+            backgroundColor: Colors.white,
+            child: Text(
+              'M',
+              style: TextStyle(
+                color: Color(0xFF4CAF50),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          label: const Text(
+            'Chat with Maya',
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
       ),
