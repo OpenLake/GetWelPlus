@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/patient_model.dart';
 import 'package:flutter_app/widgets/patient_card.dart';
 import 'package:flutter_app/pages/patient_detail_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({super.key});
@@ -11,45 +12,40 @@ class PatientListPage extends StatefulWidget {
 }
 
 class _PatientListPageState extends State<PatientListPage> {
-  final List<Patient> _patients = [
-    Patient(
-      name: 'Rahul Sharma',
-      email: 'rahul@email.com',
-      phone: '+91 98765 43210',
-      age: 28,
-      lastSessionDate: DateTime.now().subtract(const Duration(days: 5)),
-      pastIssues: ['Anxiety', 'Stress', 'Sleep disorder'],
-      pastInteractions: [
-        'Jan 10 — Discussed anxiety triggers and coping mechanisms',
-        'Feb 3 — CBT session, patient showing improvement',
-        'Mar 1 — Follow-up, sleep patterns improving',
-      ],
-    ),
-    Patient(
-      name: 'Priya Mehta',
-      email: 'priya@email.com',
-      phone: '+91 91234 56789',
-      age: 34,
-      lastSessionDate: DateTime.now().subtract(const Duration(days: 10)),
-      pastIssues: ['Depression', 'Social anxiety'],
-      pastInteractions: [
-        'Jan 20 — Initial consultation, mild depression diagnosed',
-        'Feb 15 — Started CBT, patient cooperative',
-      ],
-    ),
-    Patient(
-      name: 'Arjun Nair',
-      email: 'arjun@email.com',
-      phone: '+91 99887 76655',
-      age: 45,
-      lastSessionDate: DateTime.now().subtract(const Duration(days: 3)),
-      pastIssues: ['Work stress', 'Burnout'],
-      pastInteractions: [
-        'Feb 20 — PSS scale administered, high stress levels',
-        'Mar 4 — Stress management techniques discussed',
-      ],
-    ),
-  ];
+  List<Patient> _patients = [];
+  bool _isLoading = true;
+  final _supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPatients();
+  }
+
+  Future<void> _fetchPatients() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _supabase
+          .from('patient_profiles')
+          .select()
+          .eq('onboarding_complete', true)
+          .order('updated_at', ascending: false);
+
+      setState(() {
+        _patients = (response as List)
+            .map((json) => Patient.fromJson(json))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching patients: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,35 +55,42 @@ class _PatientListPageState extends State<PatientListPage> {
         centerTitle: true,
         elevation: 4,
       ),
-      body: _patients.isEmpty
+      body: _isLoading
           ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline, size: 52, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text(
-                    'No patients yet',
-                    style: TextStyle(color: Colors.grey, fontSize: 15),
-                  ),
-                ],
+              child: CircularProgressIndicator(
+                color: Color(0xFF4CAF50),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _patients.length,
-              itemBuilder: (context, index) => PatientCard(
-                patient: _patients[index],
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PatientDetailPage(
-                      patient: _patients[index],
+          : _patients.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.people_outline,
+                          size: 52, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text(
+                        'No patients yet',
+                        style: TextStyle(color: Colors.grey, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _patients.length,
+                  itemBuilder: (context, index) => PatientCard(
+                    patient: _patients[index],
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PatientDetailPage(
+                          patient: _patients[index],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
     );
   }
 }

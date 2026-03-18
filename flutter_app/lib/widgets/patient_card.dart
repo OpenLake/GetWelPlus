@@ -12,6 +12,9 @@ class PatientCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String get _displayName =>
+      patient.displayId.isNotEmpty ? patient.displayId : patient.name;
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -26,12 +29,12 @@ class PatientCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Avatar
+              // Avatar — shows first char of displayId
               CircleAvatar(
                 radius: 28,
                 backgroundColor: const Color(0xFF4CAF50).withOpacity(0.15),
                 child: Text(
-                  patient.name[0].toUpperCase(),
+                  _displayName[0].toUpperCase(),
                   style: const TextStyle(
                     color: Color(0xFF4CAF50),
                     fontSize: 22,
@@ -42,51 +45,31 @@ class PatientCard extends StatelessWidget {
 
               const SizedBox(width: 16),
 
-              // Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Name and age
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          patient.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                    // Display ID
+                    Text(
+                      _displayName,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
 
                     const SizedBox(height: 4),
 
-                    // Email
                     Row(
                       children: [
-                        const Icon(Icons.email_outlined,
+                        const Icon(Icons.person_outline,
                             size: 13, color: Colors.grey),
                         const SizedBox(width: 5),
-                        Text(
-                          patient.email,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    // Phone
-                    Row(
-                      children: [
-                        const Icon(Icons.phone_outlined,
-                            size: 13, color: Colors.grey),
-                        const SizedBox(width: 5),
-                        Text(
-                          patient.phone,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey),
+                        Flexible(
+                          child: Text(
+                            '${patient.age} years old',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -99,20 +82,16 @@ class PatientCard extends StatelessWidget {
                         const Icon(Icons.access_time_outlined,
                             size: 13, color: Color(0xFF4CAF50)),
                         const SizedBox(width: 5),
-                        Text(
-                          'Last session: ',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFF4CAF50)),
+                        Flexible(
+                          child: Text(
+                            'Last session: ${DateFormat('MMM d, yyyy').format(patient.lastSessionDate)}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF4CAF50)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                    '${DateFormat('MMM d, yyyy').format(patient.lastSessionDate)}',
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: const Color(0xFF4CAF50)),
-                    ),
-
                   ],
                 ),
               ),

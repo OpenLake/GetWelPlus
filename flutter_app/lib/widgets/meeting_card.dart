@@ -46,11 +46,11 @@ class MeetingCard extends StatelessWidget {
     }
   }
 
-  bool get _isJoinable {
-    final now = DateTime.now();
-    final diff = meeting.scheduledAt.difference(now).inMinutes;
-    return diff <= 5 && diff >= -30;
-  }
+bool get _isJoinable {
+  final now = DateTime.now().toUtc();
+  final diff = meeting.scheduledAt.toUtc().difference(now).inMinutes;
+  return diff <= 5 && diff >= -120;
+}
 
   bool get _isCancellable =>
       meeting.status == 'pending' || meeting.status == 'confirmed';
@@ -139,6 +139,25 @@ class MeetingCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        // Show patient display ID if available (doctor side)
+                        if (meeting.patientDisplayId.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline,
+                                  size: 12, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Text(
+                                meeting.patientDisplayId,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Text(
                           DateFormat('MMM d, yyyy · h:mm a')
