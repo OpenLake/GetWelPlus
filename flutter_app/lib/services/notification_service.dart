@@ -48,8 +48,12 @@ class NotificationService {
     );
   }
 
-  /// Requests platform permissions (mainly iOS/macOS) for notifications.
+  /// Requests platform permissions for notifications.
   Future<void> requestPermissions() async {
+    final androidPlugin =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestPermission();
+
     final iosPlugin =
         _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     await iosPlugin?.requestPermissions(
