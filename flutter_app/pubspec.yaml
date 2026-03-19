@@ -38,6 +38,11 @@ dependencies:
   flutter_riverpod: ^3.2.0
   google_fonts: ^8.0.0
   google_sign_in: ^6.2.2
+
+  # Local notifications for reminders and prompts
+  flutter_local_notifications: ^13.0.0
+  timezone: ^0.9.4
+  flutter_native_timezone: ^2.0.0
   app_links: ^6.4.1
   http: ^1.2.0
   flutter_dotenv: ^5.1.0

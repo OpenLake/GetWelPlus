@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' show max;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_app/services/notification_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -154,7 +155,82 @@ class _MoodTrackerPageState extends State<MoodTrackerPage> {
 
   Future<void> _load() async {
     final entries = await _loadEntries();
-    if (mounted) setState(() { _entries = entries; _loading = false; });
+    if (mounted) {
+      setState(() {
+        _entries = entries;
+        _loading = false;
+      });
+      await _updateReminders();
+    }
+  }
+
+  Future<void> _updateReminders() async {
+    // Remind the user to log mood if they haven't yet today.
+    final todayLogged = _todayEntry != null;
+    if (!todayLogged) {
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 1,
+        title: 'Quick mood check-in',
+        body: "You haven’t tracked your mood today. Tap to log it!",
+        payload: 'mood',
+        hour: 20,
+        minute: 0,
+      );
+    } else {
+      await NotificationService.instance.cancel(1);
+    }
+
+    // If mood has been low recently, suggest a stress check.
+    final longLowMood = _lowMoodStreak();
+    final avgMood = _entries.isEmpty
+        ? 5.0
+        : _entries.fold(0, (s, e) => s + e.moodLevel) / _entries.length;
+    final shouldSuggestStress = avgMood <= 2.5 || longLowMood >= 3;
+
+    if (shouldSuggestStress) {
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 2,
+        title: 'Feeling stressed?',
+        body: 'Take a quick stress check and see how you’re doing.',
+        payload: 'stress',
+        hour: 11,
+        minute: 0,
+      );
+
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 3,
+        title: 'Need a check-in?',
+        body: 'Book a quick session with a doctor if you’re feeling overwhelmed.',
+        payload: 'doctor',
+        hour: 15,
+        minute: 0,
+      );
+    } else {
+      await NotificationService.instance.cancel(2);
+      await NotificationService.instance.cancel(3);
+    }
+  }
+
+  int _lowMoodStreak() {
+    if (_entries.isEmpty) return 0;
+
+    final byDay = {for (final e in _entries) e.id: e};
+
+    var streak = 0;
+    var day = DateTime.now();
+    while (true) {
+      final key = _dateKey(day);
+      final entry = byDay[key];
+      if (entry == null) break;
+      if (entry.moodLevel <= 2) {
+        streak++;
+        day = day.subtract(const Duration(days: 1));
+        continue;
+      }
+      break;
+    }
+
+    return streak;
   }
 
   MoodEntry? get _todayEntry {
