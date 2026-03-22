@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/meeting_model.dart';
 import 'package:flutter_app/widgets/meeting_request_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -41,7 +42,7 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching requests: $e')),
+          SnackBar(content: Text('Error fetching requests: ${friendlyErrorMessage(e)}')),
         );
       }
     }
@@ -68,7 +69,7 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error accepting request: $e')),
+          SnackBar(content: Text('Error accepting request: ${friendlyErrorMessage(e)}')),
         );
       }
     }
@@ -95,7 +96,7 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error rejecting request: $e')),
+          SnackBar(content: Text('Error rejecting request: ${friendlyErrorMessage(e)}')),
         );
       }
     }

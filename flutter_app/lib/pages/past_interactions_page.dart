@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/meeting_model.dart';
-import 'package:flutter_app/widgets/meeting_card.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -50,7 +50,7 @@ class _PastInteractionsPageState extends State<PastInteractionsPage> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching interactions: $e')),
+          SnackBar(content: Text('Error fetching interactions: ${friendlyErrorMessage(e)}')),
         );
       }
     }

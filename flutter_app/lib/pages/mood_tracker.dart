@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math' show max;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_app/pages/online_meet_page.dart';
+import 'package:flutter_app/services/notification_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -154,7 +156,82 @@ class _MoodTrackerPageState extends State<MoodTrackerPage> {
 
   Future<void> _load() async {
     final entries = await _loadEntries();
-    if (mounted) setState(() { _entries = entries; _loading = false; });
+    if (mounted) {
+      setState(() {
+        _entries = entries;
+        _loading = false;
+      });
+      await _updateReminders();
+    }
+  }
+
+  Future<void> _updateReminders() async {
+    // Remind the user to log mood if they haven't yet today.
+    final todayLogged = _todayEntry != null;
+    if (!todayLogged) {
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 1,
+        title: 'Quick mood check-in',
+        body: "You haven’t tracked your mood today. Tap to log it!",
+        payload: 'mood',
+        hour: 20,
+        minute: 0,
+      );
+    } else {
+      await NotificationService.instance.cancel(1);
+    }
+
+    // If mood has been low recently, suggest a stress check.
+    final longLowMood = _lowMoodStreak();
+    final avgMood = _entries.isEmpty
+        ? 5.0
+        : _entries.fold(0, (s, e) => s + e.moodLevel) / _entries.length;
+    final shouldSuggestStress = avgMood <= 2.5 || longLowMood >= 3;
+
+    if (shouldSuggestStress) {
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 2,
+        title: 'Feeling stressed?',
+        body: 'Take a quick stress check and see how you’re doing.',
+        payload: 'stress',
+        hour: 11,
+        minute: 0,
+      );
+
+      await NotificationService.instance.scheduleDailyReminder(
+        id: 3,
+        title: 'Need a check-in?',
+        body: 'Book a quick session with a doctor if you’re feeling overwhelmed.',
+        payload: 'doctor',
+        hour: 15,
+        minute: 0,
+      );
+    } else {
+      await NotificationService.instance.cancel(2);
+      await NotificationService.instance.cancel(3);
+    }
+  }
+
+  int _lowMoodStreak() {
+    if (_entries.isEmpty) return 0;
+
+    final byDay = {for (final e in _entries) e.id: e};
+
+    var streak = 0;
+    var day = DateTime.now();
+    while (true) {
+      final key = _dateKey(day);
+      final entry = byDay[key];
+      if (entry == null) break;
+      if (entry.moodLevel <= 2) {
+        streak++;
+        day = day.subtract(const Duration(days: 1));
+        continue;
+      }
+      break;
+    }
+
+    return streak;
   }
 
   MoodEntry? get _todayEntry {
@@ -227,7 +304,7 @@ Give a brief, warm analysis (3-4 sentences max). Notice any patterns, celebrate 
             {'role': 'user', 'content': prompt}
           ],
           'temperature': 0.7,
-          'max_tokens': 300,
+          'max_tokens': 500,
         }),
       );
 
@@ -365,6 +442,97 @@ Give a brief, warm analysis (3-4 sentences max). Notice any patterns, celebrate 
             Icon(Icons.edit_rounded, size: 18, color: scheme.outline),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCareActionCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final today = _todayEntry;
+    final lowMoodToday = today != null && today.moodLevel <= 2;
+    final longLowRounds = _lowMoodStreak();
+    final show = lowMoodToday || longLowRounds >= 3;
+
+    if (!show) return const SizedBox.shrink();
+
+    final title = lowMoodToday
+        ? 'Today looks tough — you’re not alone'
+        : 'You’ve had a persistent low mood streak';
+    final subtitle = lowMoodToday
+        ? 'Try one of these calming steps now.'
+        : 'This is a good time for an extra check-in.';
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(subtitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.outline)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Breathing Exercise'),
+                      content: const Text(
+                        'Try 4-7-8 breathing:\n\n'
+                        '- Inhale for 4 seconds\n'
+                        '- Hold for 7 seconds\n'
+                        '- Exhale for 8 seconds\n\n'
+                        'Repeat 4 cycles.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        )
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.self_improvement_rounded),
+                label: const Text('Breathing Tip'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF1B5E20),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OnlineMeetPage()),
+                  );
+                },
+                icon: const Icon(Icons.medical_services_outlined),
+                label: const Text('Book a Doctor'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF4CAF50),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _openLogSheet(today);
+                },
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: const Text('Update Mood Log'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -830,6 +998,8 @@ Give a brief, warm analysis (3-4 sentences max). Notice any patterns, celebrate 
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTodayCard(context),
+                    const SizedBox(height: 12),
+                    _buildCareActionCard(context),
                     const SizedBox(height: 16),
                     _buildStats(context),
                     const SizedBox(height: 16),

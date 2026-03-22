@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/pages/ai_chat.dart';
 
@@ -35,7 +36,10 @@ class _MayaConsentPageState extends State<MayaConsentPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(friendlyErrorMessage(e, fallback: 'Something went wrong. Please try again.')),
+            backgroundColor: Colors.red,
+          ),
         );
         setState(() => _isLoading = false);
       }

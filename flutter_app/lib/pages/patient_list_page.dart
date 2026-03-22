@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/patient_model.dart';
 import 'package:flutter_app/widgets/patient_card.dart';
 import 'package:flutter_app/pages/patient_detail_page.dart';
@@ -13,6 +14,8 @@ class PatientListPage extends StatefulWidget {
 
 class _PatientListPageState extends State<PatientListPage> {
   List<Patient> _patients = [];
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
   bool _isLoading = true;
   final _supabase = Supabase.instance.client;
 
@@ -20,6 +23,22 @@ class _PatientListPageState extends State<PatientListPage> {
   void initState() {
     super.initState();
     _fetchPatients();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Patient> get _filteredPatients {
+    if (_searchQuery.isEmpty) return _patients;
+    final lowerQuery = _searchQuery.toLowerCase();
+    return _patients.where((patient) {
+      return patient.name.toLowerCase().contains(lowerQuery) ||
+          patient.displayId.toLowerCase().contains(lowerQuery) ||
+          patient.email.toLowerCase().contains(lowerQuery);
+    }).toList();
   }
 
   Future<void> _fetchPatients() async {
@@ -41,7 +60,7 @@ class _PatientListPageState extends State<PatientListPage> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching patients: $e')),
+          SnackBar(content: Text('Error fetching patients: ${friendlyErrorMessage(e)}')),
         );
       }
     }
@@ -49,11 +68,20 @@ class _PatientListPageState extends State<PatientListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final displayed = _filteredPatients;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Patient List'),
         centerTitle: true,
         elevation: 4,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reload patients',
+            onPressed: _fetchPatients,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(
@@ -61,36 +89,68 @@ class _PatientListPageState extends State<PatientListPage> {
                 color: Color(0xFF4CAF50),
               ),
             )
-          : _patients.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.people_outline,
-                          size: 52, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text(
-                        'No patients yet',
-                        style: TextStyle(color: Colors.grey, fontSize: 15),
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, ID, or email',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _patients.length,
-                  itemBuilder: (context, index) => PatientCard(
-                    patient: _patients[index],
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PatientDetailPage(
-                          patient: _patients[index],
-                        ),
-                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
                     ),
                   ),
                 ),
+                Expanded(
+                  child: displayed.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.people_outline, size: 52, color: Colors.grey),
+                              SizedBox(height: 12),
+                              Text(
+                                'No patients found',
+                                style: TextStyle(color: Colors.grey, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: displayed.length,
+                          itemBuilder: (context, index) {
+                            final patient = displayed[index];
+                            return PatientCard(
+                              patient: patient,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PatientDetailPage(patient: patient),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
     );
   }
 }

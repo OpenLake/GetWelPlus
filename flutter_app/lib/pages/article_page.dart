@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/pages/article_reader_page.dart';
 import 'package:flutter_app/services/article_service.dart';
 import 'package:flutter_app/widgets/article_card.dart';
@@ -56,7 +57,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _popularError = e.toString().replaceFirst('Exception: ', '');
+          _popularError = friendlyErrorMessage(e);
           _loadingPopular = false;
         });
       }
@@ -89,7 +90,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _categoryError = e.toString().replaceFirst('Exception: ', '');
+          _categoryError = friendlyErrorMessage(e);
           _loadingCategory = false;
         });
       }

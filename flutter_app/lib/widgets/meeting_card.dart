@@ -47,8 +47,8 @@ class MeetingCard extends StatelessWidget {
   }
 
 bool get _isJoinable {
-  final now = DateTime.now().toUtc();
-  final diff = meeting.scheduledAt.toUtc().difference(now).inMinutes;
+  final now = DateTime.now();
+  final diff = meeting.scheduledAt.difference(now).inMinutes;
   return diff <= 5 && diff >= -120;
 }
 

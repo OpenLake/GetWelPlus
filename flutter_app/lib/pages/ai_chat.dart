@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/widgets/chat_bubble.dart';
 import 'package:flutter_app/services/chat_service.dart';
 
@@ -77,7 +78,10 @@ class _AiChatPageState extends State<AiChatPage> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(friendlyErrorMessage(e, fallback: 'Something went wrong. Please try again.')),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

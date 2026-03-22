@@ -104,12 +104,43 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
+  static const List<String> _quotes = [
+    'Every step forward counts — small habits become strong routines.',
+    'You are your most important project. Be kind to yourself today.',
+    'It is okay to pause, reflect, and then move with intention.',
+    'A few deep breaths can reset your nervous system in minutes.',
+  ];
+
+  String _todayQuote() {
+    final index = DateTime.now().day % _quotes.length;
+    return _quotes[index];
+  }
+
   String getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) return 'Good Morning';
     if (hour >= 12 && hour < 17) return 'Good Afternoon';
     if (hour >= 17 && hour < 21) return 'Good Evening';
     return 'Good Night';
+  }
+
+  void _startBreathingExercise(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('2-Minute Breathing Exercise'),
+        content: const Text(
+          'Try this simple calming practice:\n\n'
+          '1. Inhale for 4 seconds\n'
+          '2. Hold for 4 seconds\n'
+          '3. Exhale for 6 seconds\n'
+          '4. Repeat 5 times',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Got it')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -223,6 +254,41 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.green.shade100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Today’s wellness focus',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          Text(_todayQuote(), style: Theme.of(context).textTheme.bodyMedium),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () => _startBreathingExercise(context),
+                              icon: const Icon(Icons.self_improvement_outlined),
+                              label: const Text('Quick 2-min breathing'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF4CAF50),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
                     // Feature List
                     FeatureCard(

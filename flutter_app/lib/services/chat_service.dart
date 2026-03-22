@@ -29,6 +29,8 @@ class ChatService {
   Map<String, dynamic>? _patientProfile;
   bool _profileLoaded = false;
   final bool _usePersonalData;
+  final bool _isAdminMode;
+  final String? _targetPatientId;
 
   // maya's personality - warm, relatable, like a good friend
   static const _basePrompt = '''
@@ -61,7 +63,32 @@ Communication style:
 Remember: You're Maya, not an AI assistant. Be human, be real, be there for them.
 ''';
 
-  ChatService({bool usePersonalData = true}) : _usePersonalData = usePersonalData {
+  // Additional guidance when Maya is helping a clinician
+  static const _adminPrompt = '''
+You are Maya, a thoughtful wellness assistant who supports healthcare providers (doctors, therapists, and other clinicians) inside the GetWel+ app.
+
+Your role on the clinician side:
+- Be a friendly, knowledgeable teammate who helps interpret what patients share
+- Highlight patterns, risks, and potential talking points the clinician can explore further
+- Offer psychoeducational explanations and gentle suggestions the clinician may choose to discuss with the patient
+
+When a clinician asks you a question, respond as if you are a supportive teammate: summarize relevant patient details (only from the information provided), offer gentle suggestions, and mention when something may warrant closer follow-up or professional evaluation.
+
+You should:
+- Keep the tone warm, professional, and empathetic
+- Avoid clinical diagnoses or treatment plans; focus on patterns, coping strategies, and emotional support
+- Respect privacy: only use patient data that is explicitly provided to you or included in the patient summary
+
+If you are given a patient's background, respond with helpful, non-judgmental guidance and offer ideas the clinician can discuss with their patient.
+''';
+
+  ChatService({
+    bool usePersonalData = true,
+    bool isAdminMode = false,
+    String? targetPatientId,
+  })  : _usePersonalData = usePersonalData,
+        _isAdminMode = isAdminMode,
+        _targetPatientId = targetPatientId {
     _initializeWithProfile();
   }
 
@@ -75,13 +102,16 @@ Remember: You're Maya, not an AI assistant. Be human, be real, be there for them
 
   Future<void> _loadPatientProfile() async {
     try {
+      // If we're in admin mode, use the provided target patient ID.
+      // Otherwise, use the current logged-in user.
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
+      final userId = _isAdminMode ? _targetPatientId : user?.id;
+      if (userId == null) return;
 
       _patientProfile = await Supabase.instance.client
           .from('patient_profiles')
           .select()
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
     } catch (e) {
       // couldn't load profile, will use generic prompt
@@ -90,7 +120,53 @@ Remember: You're Maya, not an AI assistant. Be human, be real, be there for them
   }
 
   String _buildSystemPrompt() {
-    // if user didn't consent to data sharing, just use base prompt
+    // When in admin mode (doctor/clinician), feed Maya a different system prompt
+    // that sets expectations for assisting a healthcare provider.
+    if (_isAdminMode) {
+      if (!_usePersonalData || _patientProfile == null) {
+        return _adminPrompt + _basePrompt;
+      }
+
+      // build concise patient summary
+      final name = _patientProfile!['full_name'] ?? '';
+      final age = _patientProfile!['age'] ?? '';
+      final conditions = _patientProfile!['medical_conditions'] ?? '';
+      final medications = _patientProfile!['current_medications'] ?? '';
+      final concerns = _patientProfile!['mental_health_concerns'] ?? '';
+      final therapyHistory = _patientProfile!['therapy_history'] ?? '';
+
+      final contextParts = <String>[];
+      if (name.toString().isNotEmpty) {
+        contextParts.add('Name: $name');
+      }
+      if (age.toString().isNotEmpty && age != 0) {
+        contextParts.add('Age: $age');
+      }
+      if (conditions.toString().isNotEmpty) {
+        contextParts.add('Medical conditions: $conditions');
+      }
+      if (medications.toString().isNotEmpty) {
+        contextParts.add('Current medications: $medications');
+      }
+      if (concerns.toString().isNotEmpty) {
+        contextParts.add('Main concerns: $concerns');
+      }
+      if (therapyHistory.toString().isNotEmpty) {
+        contextParts.add('Therapy history: $therapyHistory');
+      }
+
+      final patientContext = '''
+
+PATIENT SUMMARY (use for context when responding):
+${contextParts.join('. ')}.
+
+When responding, remain respectful of privacy, keep tone supportive, and avoid making definitive medical diagnoses.
+''';
+
+      return _adminPrompt + _basePrompt + patientContext;
+    }
+
+    // end user mode
     if (!_usePersonalData || _patientProfile == null) return _basePrompt;
 
     // build context from patient's medical history

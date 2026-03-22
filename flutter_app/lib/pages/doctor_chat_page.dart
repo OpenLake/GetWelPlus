@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/widgets/chat_bubble.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -67,7 +68,7 @@ class _DoctorChatPageState extends State<DoctorChatPage> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading messages: $e')),
+          SnackBar(content: Text('Error loading messages: ${friendlyErrorMessage(e)}')),
         );
       }
     }
@@ -98,7 +99,7 @@ class _DoctorChatPageState extends State<DoctorChatPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving tag: $e')),
+          SnackBar(content: Text('Error saving tag: ${friendlyErrorMessage(e)}')),
         );
       }
     }
@@ -368,7 +369,7 @@ class _DoctorChatPageState extends State<DoctorChatPage> {
       setState(() => _messages.removeLast());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
+          SnackBar(content: Text('Failed to send message: ${friendlyErrorMessage(e)}')),
         );
       }
     }

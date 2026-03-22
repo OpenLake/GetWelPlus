@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/pages/online_meet_page.dart';
 import 'package:flutter_app/widgets/option_tile.dart';
 
 class _Question {
@@ -465,6 +466,64 @@ class _StressCheckPageState extends State<StressCheckPage> {
             title: 'Recommended Next Steps',
             body: result.recommendation,
             color: result.color,
+          ),
+          const SizedBox(height: 20),
+
+          // Support actions based on risk level
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: result.color.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Immediate Support',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.medical_services_rounded),
+                  label: const Text('Book a Doctor Session'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: result.color,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const OnlineMeetPage()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.self_improvement_rounded),
+                  label: const Text('Try 4-7-8 Breathing Guide'),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Breathing Guide'),
+                        content: const Text(
+                            'Inhale quietly through your nose for 4 seconds, hold for 7 seconds, and exhale through your mouth for 8 seconds. Repeat 4 cycles.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
