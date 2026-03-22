@@ -80,7 +80,7 @@ List<Meeting> get _scheduled => _allMeetings
             ? 'My Session'
             : _titleController.text.trim(),
         'notes': _notesController.text.trim(),
-        'scheduled_at': _selectedDateTime!.toIso8601String(),
+        'scheduled_at': _selectedDateTime!.toUtc().toIso8601String(),
         'status': 'pending',
         'meeting_type': _selectedMeetingType,
       });
