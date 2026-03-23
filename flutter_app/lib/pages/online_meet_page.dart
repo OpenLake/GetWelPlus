@@ -48,7 +48,7 @@ List<Meeting> get _scheduled => _allMeetings
 
       final response = await _supabase
           .from('meetings')
-          .select('*, patient_profiles(display_id, full_name)')
+          .select('*, patient_profiles(display_id)')
           .eq('patient_id', userId)
           .order('scheduled_at', ascending: true);
 

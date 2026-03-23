@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/meeting_model.dart';
+import 'package:flutter_app/services/doctor_data_service.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,10 +23,12 @@ class _PastInteractionsPageState extends State<PastInteractionsPage> {
   List<Meeting> _meetings = [];
   bool _isLoading = true;
   final _supabase = Supabase.instance.client;
+  late final DoctorDataService _doctorDataService;
 
   @override
   void initState() {
     super.initState();
+    _doctorDataService = DoctorDataService(client: _supabase);
     _fetchInteractions();
   }
 
@@ -34,16 +37,22 @@ class _PastInteractionsPageState extends State<PastInteractionsPage> {
     try {
       final response = await _supabase
           .from('meetings')
-          .select('*, patient_profiles(display_id, full_name)')
+          .select('*')
           .eq('patient_id', widget.patientId)
-          .eq('status', 'confirmed')
+          .or('status.eq.confirmed,status.eq.completed')
           .lt('scheduled_at', DateTime.now().toIso8601String())
           .order('scheduled_at', ascending: false);
 
+      final typedRows = (response as List).cast<Map<String, dynamic>>();
+      final profilesById = await _doctorDataService.fetchPatientProfilesByIds(
+        [widget.patientId],
+      );
+
       setState(() {
-        _meetings = (response as List)
-            .map((json) => Meeting.fromJson(json))
-            .toList();
+        _meetings = _doctorDataService.mapMeetings(
+          typedRows,
+          profilesById: profilesById,
+        );
         _isLoading = false;
       });
     } catch (e) {

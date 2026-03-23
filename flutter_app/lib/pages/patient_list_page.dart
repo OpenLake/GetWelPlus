@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/patient_model.dart';
+import 'package:flutter_app/services/doctor_data_service.dart';
 import 'package:flutter_app/widgets/patient_card.dart';
 import 'package:flutter_app/pages/patient_detail_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,10 +19,12 @@ class _PatientListPageState extends State<PatientListPage> {
   final _searchController = TextEditingController();
   bool _isLoading = true;
   final _supabase = Supabase.instance.client;
+  late final DoctorDataService _doctorDataService;
 
   @override
   void initState() {
     super.initState();
+    _doctorDataService = DoctorDataService(client: _supabase);
     _fetchPatients();
   }
 
@@ -35,8 +38,8 @@ class _PatientListPageState extends State<PatientListPage> {
     if (_searchQuery.isEmpty) return _patients;
     final lowerQuery = _searchQuery.toLowerCase();
     return _patients.where((patient) {
-      return patient.name.toLowerCase().contains(lowerQuery) ||
-          patient.displayId.toLowerCase().contains(lowerQuery) ||
+      return patient.displayId.toLowerCase().contains(lowerQuery) ||
+          patient.id.toLowerCase().contains(lowerQuery) ||
           patient.email.toLowerCase().contains(lowerQuery);
     }).toList();
   }
@@ -44,23 +47,51 @@ class _PatientListPageState extends State<PatientListPage> {
   Future<void> _fetchPatients() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _supabase
-          .from('patient_profiles')
-          .select()
-          .eq('onboarding_complete', true)
-          .order('updated_at', ascending: false);
+      final meetingRows = await _supabase
+          .from('meetings')
+          .select('patient_id, scheduled_at, status')
+          .inFilter('status', ['pending', 'confirmed', 'completed']);
+
+      final typedRows = (meetingRows as List).cast<Map<String, dynamic>>();
+      final meetingCount = typedRows.length;
+      debugPrint('[PatientList] meeting rows fetched: $meetingCount');
+
+      final profilesById = await _doctorDataService.fetchPatientProfilesByIds(
+        typedRows
+            .map((row) => (row['patient_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty),
+      );
+
+      debugPrint(
+        '[PatientList] patient profiles resolved: ${profilesById.length}',
+      );
+
+      if (profilesById.isEmpty) {
+        setState(() {
+          _patients = [];
+          _isLoading = false;
+        });
+        return;
+      }
 
       setState(() {
-        _patients = (response as List)
-            .map((json) => Patient.fromJson(json))
-            .toList();
+        _patients = _doctorDataService.mapPatientsFromMeetingRows(
+          typedRows,
+          profilesById: profilesById,
+        );
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[PatientList] Error fetching patients: $e');
+      debugPrint(stackTrace.toString());
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching patients: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+            content: Text(
+              'Error fetching patients: ${friendlyErrorMessage(e)}',
+            ),
+          ),
         );
       }
     }
@@ -85,19 +116,20 @@ class _PatientListPageState extends State<PatientListPage> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF4CAF50),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF4CAF50)),
             )
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: TextField(
                     controller: _searchController,
                     onChanged: (value) => setState(() => _searchQuery = value),
                     decoration: InputDecoration(
-                      hintText: 'Search by name, ID, or email',
+                      hintText: 'Search by ID, user ID, or email',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
@@ -123,11 +155,18 @@ class _PatientListPageState extends State<PatientListPage> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.people_outline, size: 52, color: Colors.grey),
+                              Icon(
+                                Icons.people_outline,
+                                size: 52,
+                                color: Colors.grey,
+                              ),
                               SizedBox(height: 12),
                               Text(
                                 'No patients found',
-                                style: TextStyle(color: Colors.grey, fontSize: 15),
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -142,7 +181,8 @@ class _PatientListPageState extends State<PatientListPage> {
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => PatientDetailPage(patient: patient),
+                                  builder: (_) =>
+                                      PatientDetailPage(patient: patient),
                                 ),
                               ),
                             );

@@ -1,8 +1,8 @@
 class Meeting {
   final String id;
+  final String patientId;
   final String title;
-  final String patientName;
-  final String patientDisplayId; // NEW — doctor sees this
+  final String patientDisplayId; // doctor-facing unique ID (not full patient full name)
   final DateTime scheduledAt;
   final DateTime createdAt;
   final String notes;
@@ -12,8 +12,8 @@ class Meeting {
 
   const Meeting({
     this.id = '',
+    this.patientId = '',
     required this.title,
-    required this.patientName,
     this.patientDisplayId = '',
     required this.scheduledAt,
     required this.createdAt,
@@ -25,23 +25,24 @@ class Meeting {
 
   // Parses a Supabase row into a Meeting object
   factory Meeting.fromJson(Map<String, dynamic> json) {
+    final patientProfile = extractPatientProfile(json['patient_profiles']);
+
     return Meeting(
       id: json['id'] ?? '',
+      patientId: json['patient_id'] ?? '',
       title: json['title'] ?? '',
-      patientName: json['patient_profiles']?['full_name'] ?? '',
-      patientDisplayId: json['patient_profiles']?['display_id'] ?? '',
-scheduledAt: DateTime.parse(json['scheduled_at']).toLocal(),
-createdAt: DateTime.parse(json['created_at']).toLocal(),
+      patientDisplayId: (patientProfile?['display_id'] ?? '').toString(),
+      scheduledAt: DateTime.parse(json['scheduled_at']).toLocal(),
+      createdAt: DateTime.parse(json['created_at']).toLocal(),
       notes: json['notes'] ?? '',
       status: json['status'] ?? 'pending',
-meetingType: json['meeting_type'] ?? 'video',
+      meetingType: json['meeting_type'] ?? 'video',
       tags: List<String>.from(json['tags'] ?? []),
     );
   }
 
-  bool get isAttended => scheduledAt
-      .add(const Duration(hours: 24))
-      .isBefore(DateTime.now());
+  bool get isAttended =>
+      scheduledAt.add(const Duration(hours: 24)).isBefore(DateTime.now());
 
   bool get isChat => meetingType == 'chat';
 
@@ -52,4 +53,17 @@ meetingType: json['meeting_type'] ?? 'video',
 
   String get jitsiRoom =>
       'getwelplus-${id.isEmpty ? title.replaceAll(' ', '-').toLowerCase() : id}';
+
+  static Map<String, dynamic>? extractPatientProfile(dynamic rawProfile) {
+    if (rawProfile is Map<String, dynamic>) {
+      return rawProfile;
+    }
+    if (rawProfile is List && rawProfile.isNotEmpty) {
+      final first = rawProfile.first;
+      if (first is Map<String, dynamic>) {
+        return first;
+      }
+    }
+    return null;
+  }
 }

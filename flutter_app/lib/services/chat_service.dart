@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,6 +32,7 @@ class ChatService {
   final bool _usePersonalData;
   final bool _isAdminMode;
   final String? _targetPatientId;
+  final String? _doctorProvidedPatientContext;
 
   // maya's personality - warm, relatable, like a good friend
   static const _basePrompt = '''
@@ -86,9 +88,11 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
     bool usePersonalData = true,
     bool isAdminMode = false,
     String? targetPatientId,
+    String? doctorProvidedPatientContext,
   })  : _usePersonalData = usePersonalData,
         _isAdminMode = isAdminMode,
-        _targetPatientId = targetPatientId {
+        _targetPatientId = targetPatientId,
+        _doctorProvidedPatientContext = doctorProvidedPatientContext {
     _initializeWithProfile();
   }
 
@@ -97,6 +101,10 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
     await _loadPatientProfile();
     final systemPrompt = _buildSystemPrompt();
     _conversationHistory.add(ChatMessage(role: 'system', content: systemPrompt));
+    debugPrint(
+      '[ChatService] initialized isAdminMode=$_isAdminMode targetPatientId=$_targetPatientId doctorContextLength=${(_doctorProvidedPatientContext ?? '').length} profileLoaded=${_patientProfile != null}',
+    );
+    debugPrint('[ChatService] system prompt="$systemPrompt"');
     _profileLoaded = true;
   }
 
@@ -106,6 +114,9 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
       // Otherwise, use the current logged-in user.
       final user = Supabase.instance.client.auth.currentUser;
       final userId = _isAdminMode ? _targetPatientId : user?.id;
+      debugPrint(
+        '[ChatService] _loadPatientProfile isAdminMode=$_isAdminMode resolvedUserId=$userId',
+      );
       if (userId == null) return;
 
       _patientProfile = await Supabase.instance.client
@@ -113,8 +124,12 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
           .select()
           .eq('user_id', userId)
           .maybeSingle();
+      debugPrint(
+        '[ChatService] patient profile loaded=${_patientProfile != null} keys=${_patientProfile?.keys.toList()}',
+      );
     } catch (e) {
       // couldn't load profile, will use generic prompt
+      debugPrint('[ChatService] _loadPatientProfile error=$e');
       _patientProfile = null;
     }
   }
@@ -123,21 +138,41 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
     // When in admin mode (doctor/clinician), feed Maya a different system prompt
     // that sets expectations for assisting a healthcare provider.
     if (_isAdminMode) {
+      final explicitContext = (_doctorProvidedPatientContext ?? '').trim();
+      debugPrint(
+        '[ChatService] buildSystemPrompt adminMode explicitContextLength=${explicitContext.length}',
+      );
+      if (explicitContext.isNotEmpty) {
+        return '''
+$_adminPrompt
+$_basePrompt
+
+PATIENT SUMMARY (selected by clinician; use this as the primary context):
+$explicitContext
+
+When responding, stay aligned with this patient summary and avoid diagnosis.
+''';
+      }
+
       if (!_usePersonalData || _patientProfile == null) {
+        debugPrint(
+          '[ChatService] adminMode falling back to generic prompt usePersonalData=$_usePersonalData hasProfile=${_patientProfile != null}',
+        );
         return _adminPrompt + _basePrompt;
       }
 
       // build concise patient summary
-      final name = _patientProfile!['full_name'] ?? '';
+      final displayId = _patientProfile!['display_id'] ?? '';
       final age = _patientProfile!['age'] ?? '';
       final conditions = _patientProfile!['medical_conditions'] ?? '';
       final medications = _patientProfile!['current_medications'] ?? '';
       final concerns = _patientProfile!['mental_health_concerns'] ?? '';
       final therapyHistory = _patientProfile!['therapy_history'] ?? '';
+      final allergies = _patientProfile!['allergies'] ?? '';
 
       final contextParts = <String>[];
-      if (name.toString().isNotEmpty) {
-        contextParts.add('Name: $name');
+      if (displayId.toString().trim().isNotEmpty) {
+        contextParts.add('Patient ID: $displayId');
       }
       if (age.toString().isNotEmpty && age != 0) {
         contextParts.add('Age: $age');
@@ -147,6 +182,9 @@ If you are given a patient's background, respond with helpful, non-judgmental gu
       }
       if (medications.toString().isNotEmpty) {
         contextParts.add('Current medications: $medications');
+      }
+      if (allergies.toString().isNotEmpty) {
+        contextParts.add('Allergies: $allergies');
       }
       if (concerns.toString().isNotEmpty) {
         contextParts.add('Main concerns: $concerns');
@@ -163,6 +201,7 @@ ${contextParts.join('. ')}.
 When responding, remain respectful of privacy, keep tone supportive, and avoid making definitive medical diagnoses.
 ''';
 
+      debugPrint('[ChatService] adminMode patientContext="$patientContext"');
       return _adminPrompt + _basePrompt + patientContext;
     }
 
@@ -224,6 +263,9 @@ Use their name sometimes (but not every message - that gets weird). Be mindful o
 
     // add what user said
     _conversationHistory.add(ChatMessage(role: 'user', content: userMessage));
+    debugPrint(
+      '[ChatService] sendMessage historyCount=${_conversationHistory.length} userMessage="$userMessage"',
+    );
 
     try {
       final response = await http.post(
@@ -245,16 +287,21 @@ Use their name sometimes (but not every message - that gets weird). Be mindful o
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final aiReply = data['choices'][0]['message']['content'] as String;
+        debugPrint('[ChatService] response ok aiReply="$aiReply"');
 
         // save AI's response for context
         _conversationHistory.add(ChatMessage(role: 'assistant', content: aiReply));
         return aiReply;
       } else {
         final err = jsonDecode(response.body);
+        debugPrint(
+          '[ChatService] response error status=${response.statusCode} body=${response.body}',
+        );
         throw Exception(err['error']?['message'] ?? 'Something went wrong');
       }
     } catch (e) {
       // oops, remove user msg since we couldn't get a response
+      debugPrint('[ChatService] sendMessage exception=$e');
       _conversationHistory.removeLast();
       rethrow;
     }

@@ -16,6 +16,9 @@ class MeetingRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final patientIdentifier =
+        meeting.patientDisplayId.isNotEmpty ? meeting.patientDisplayId : meeting.patientId;
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -27,7 +30,7 @@ class MeetingRequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // Patient name + time sent
+            // Patient identifier
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -40,7 +43,7 @@ class MeetingRequestCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      meeting.patientName,
+                      patientIdentifier.isNotEmpty ? patientIdentifier : 'Unknown Patient',
                       style: Theme.of(context).textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),

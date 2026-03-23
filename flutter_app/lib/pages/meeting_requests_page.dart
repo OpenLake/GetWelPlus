@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/meeting_model.dart';
+import 'package:flutter_app/services/doctor_data_service.dart';
 import 'package:flutter_app/widgets/meeting_request_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,10 +16,12 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
   List<Meeting> _requests = [];
   bool _isLoading = true;
   final _supabase = Supabase.instance.client;
+  late final DoctorDataService _doctorDataService;
 
   @override
   void initState() {
     super.initState();
+    _doctorDataService = DoctorDataService(client: _supabase);
     _fetchRequests();
   }
 
@@ -28,21 +31,31 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
     try {
       final response = await _supabase
           .from('meetings')
-          .select('*, patient_profiles(display_id, full_name)')
+          .select('*')
           .eq('status', 'pending')
           .order('created_at', ascending: false);
 
+      final typedRows = (response as List).cast<Map<String, dynamic>>();
+      final profilesById = await _doctorDataService.fetchPatientProfilesByIds(
+        typedRows.map((row) => (row['patient_id'] ?? '').toString()),
+      );
+
       setState(() {
-        _requests = (response as List)
-            .map((json) => Meeting.fromJson(json))
-            .toList();
+        _requests = _doctorDataService.mapMeetings(
+          typedRows,
+          profilesById: profilesById,
+        );
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching requests: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+            content: Text(
+              'Error fetching requests: ${friendlyErrorMessage(e)}',
+            ),
+          ),
         );
       }
     }
@@ -69,7 +82,11 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error accepting request: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+            content: Text(
+              'Error accepting request: ${friendlyErrorMessage(e)}',
+            ),
+          ),
         );
       }
     }
@@ -96,7 +113,11 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error rejecting request: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+            content: Text(
+              'Error rejecting request: ${friendlyErrorMessage(e)}',
+            ),
+          ),
         );
       }
     }
@@ -112,34 +133,31 @@ class _MeetingRequestsPageState extends State<MeetingRequestsPage> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF4CAF50),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF4CAF50)),
             )
           : _requests.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.inbox_outlined,
-                          size: 52, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text(
-                        'No pending requests',
-                        style: TextStyle(color: Colors.grey, fontSize: 15),
-                      ),
-                    ],
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 52, color: Colors.grey),
+                  SizedBox(height: 12),
+                  Text(
+                    'No pending requests',
+                    style: TextStyle(color: Colors.grey, fontSize: 15),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _requests.length,
-                  itemBuilder: (context, index) => MeetingRequestCard(
-                    meeting: _requests[index],
-                    onAccept: () => _acceptRequest(_requests[index]),
-                    onReject: () => _rejectRequest(_requests[index]),
-                  ),
-                ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _requests.length,
+              itemBuilder: (context, index) => MeetingRequestCard(
+                meeting: _requests[index],
+                onAccept: () => _acceptRequest(_requests[index]),
+                onReject: () => _rejectRequest(_requests[index]),
+              ),
+            ),
     );
   }
 }

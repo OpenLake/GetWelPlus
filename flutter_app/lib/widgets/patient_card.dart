@@ -6,22 +6,15 @@ class PatientCard extends StatelessWidget {
   final Patient patient;
   final VoidCallback onTap;
 
-  const PatientCard({
-    super.key,
-    required this.patient,
-    required this.onTap,
-  });
+  const PatientCard({super.key, required this.patient, required this.onTap});
 
-  String get _displayName =>
-      patient.displayId.isNotEmpty ? patient.displayId : patient.name;
+  String get _displayId => patient.displayId.isNotEmpty ? patient.displayId : patient.id;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
@@ -34,7 +27,7 @@ class PatientCard extends StatelessWidget {
                 radius: 28,
                 backgroundColor: const Color(0xFF4CAF50).withOpacity(0.15),
                 child: Text(
-                  _displayName[0].toUpperCase(),
+                  _displayId.isNotEmpty ? _displayId[0].toUpperCase() : 'P',
                   style: const TextStyle(
                     color: Color(0xFF4CAF50),
                     fontSize: 22,
@@ -51,23 +44,28 @@ class PatientCard extends StatelessWidget {
                   children: [
                     // Display ID
                     Text(
-                      _displayName,
-                      style: Theme.of(context).textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      _displayId,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
 
                     const SizedBox(height: 4),
 
                     Row(
                       children: [
-                        const Icon(Icons.person_outline,
-                            size: 13, color: Colors.grey),
+                        const Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             '${patient.age} years old',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -79,8 +77,11 @@ class PatientCard extends StatelessWidget {
                     // Last session
                     Row(
                       children: [
-                        const Icon(Icons.access_time_outlined,
-                            size: 13, color: Color(0xFF4CAF50)),
+                        const Icon(
+                          Icons.access_time_outlined,
+                          size: 13,
+                          color: Color(0xFF4CAF50),
+                        ),
                         const SizedBox(width: 5),
                         Flexible(
                           child: Text(
@@ -92,6 +93,18 @@ class PatientCard extends StatelessWidget {
                         ),
                       ],
                     ),
+
+                    if (patient.mentalHealthConcerns.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Concerns: ${patient.mentalHealthConcerns.trim().length > 60 ? patient.mentalHealthConcerns.trim().substring(0, 60) + '...' : patient.mentalHealthConcerns.trim()}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
               ),
