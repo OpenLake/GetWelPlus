@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/core/error_messages.dart';
 import 'package:flutter_app/models/meeting_model.dart';
 import 'package:flutter_app/widgets/meeting_card.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_app/pages/doctor_chat_page.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class OnlineMeetPage extends StatefulWidget {
-  const OnlineMeetPage({super.key});
+class ChatListPage extends StatefulWidget {
+  const ChatListPage({super.key});
 
   @override
-  State<OnlineMeetPage> createState() => _OnlineMeetPageState();
+  State<ChatListPage> createState() => _ChatListPageState();
 }
 
-class _OnlineMeetPageState extends State<OnlineMeetPage>
+class _ChatListPageState extends State<ChatListPage>
     with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
@@ -27,30 +25,29 @@ class _OnlineMeetPageState extends State<OnlineMeetPage>
       .where((m) => m.isAttended && m.status != 'cancelled')
       .toList();
 
-List<Meeting> get _scheduled => _allMeetings
-    .where((m) => !m.isAttended && m.status != 'cancelled')
-    .toList();
+  List<Meeting> get _scheduled => _allMeetings
+      .where((m) => !m.isAttended && m.status != 'cancelled')
+      .toList();
+
   List<Meeting> get _cancelled => _allMeetings
       .where((m) => m.status == 'cancelled')
       .toList();
 
   DateTime? _selectedDateTime;
-  String _selectedMeetingType = 'video';
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
-  // Fetch all meetings for current user from Supabase
   Future<void> _fetchMeetings() async {
     setState(() => _isLoading = true);
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-final response = await _supabase
+      final response = await _supabase
           .from('meetings')
-          .select('*, patient_profiles(display_id)')
+          .select('*, patient_profiles(display_id, full_name)')
           .eq('patient_id', userId)
-          .eq('meeting_type', 'video')
+          .eq('meeting_type', 'chat')
           .order('scheduled_at', ascending: true);
 
       setState(() {
@@ -63,14 +60,13 @@ final response = await _supabase
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching meetings: ${friendlyErrorMessage(e)}')),
+          SnackBar(content: Text('Error fetching chats: $e')),
         );
       }
     }
   }
 
-  // Insert new meeting into Supabase
-  Future<void> _scheduleMeeting() async {
+  Future<void> _scheduleChat() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null || _selectedDateTime == null) return;
 
@@ -78,25 +74,24 @@ final response = await _supabase
       await _supabase.from('meetings').insert({
         'patient_id': userId,
         'title': _titleController.text.trim().isEmpty
-            ? 'My Session'
+            ? 'Chat Session'
             : _titleController.text.trim(),
         'notes': _notesController.text.trim(),
         'scheduled_at': _selectedDateTime!.toUtc().toIso8601String(),
         'status': 'pending',
-        'meeting_type': 'video',
+        'meeting_type': 'chat',
       });
 
-      await _fetchMeetings(); // refresh list
+      await _fetchMeetings();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error scheduling meeting: ${friendlyErrorMessage(e)}')),
+          SnackBar(content: Text('Error scheduling chat: $e')),
         );
       }
     }
   }
 
-  // Cancel a meeting in Supabase
   Future<void> _cancelMeeting(Meeting meeting) async {
     try {
       await _supabase
@@ -104,11 +99,11 @@ final response = await _supabase
           .update({'status': 'cancelled'})
           .eq('id', meeting.id);
 
-      await _fetchMeetings(); // refresh list
+      await _fetchMeetings();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error cancelling meeting: ${friendlyErrorMessage(e)}')),
+          SnackBar(content: Text('Error cancelling chat: $e')),
         );
       }
     }
@@ -156,7 +151,7 @@ final response = await _supabase
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Schedule a Meeting',
+                        'Schedule a Chat',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -262,8 +257,6 @@ final response = await _supabase
                       ),
                       const SizedBox(height: 16),
 
-                      const SizedBox(height: 16),
-
                       // Notes field
                       TextField(
                         controller: _notesController,
@@ -310,10 +303,10 @@ final response = await _supabase
                               ? null
                               : () async {
                                   Navigator.pop(context);
-                                  await _scheduleMeeting();
+                                  await _scheduleChat();
                                 },
                           child: const Text(
-                            'Schedule Meeting',
+                            'Schedule Chat',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
@@ -337,7 +330,7 @@ final response = await _supabase
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _titleController.addListener(() => setState(() {}));
-    _fetchMeetings(); // load from Supabase on open
+    _fetchMeetings();
   }
 
   @override
@@ -353,7 +346,7 @@ final response = await _supabase
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Online Meet'),
+          title: const Text('1:1 Chat'),
           centerTitle: true,
           elevation: 4,
           bottom: TabBar(
@@ -385,11 +378,11 @@ final response = await _supabase
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.event_busy_outlined,
+                              Icon(Icons.chat_bubble_outline,
                                   size: 52, color: Colors.grey),
                               SizedBox(height: 12),
                               Text(
-                                'No upcoming meetings',
+                                'No upcoming chats',
                                 style: TextStyle(
                                     color: Colors.grey, fontSize: 15),
                               ),
@@ -405,38 +398,15 @@ final response = await _supabase
                               meeting: meeting,
                               onTap: () {},
                               onCancel: () => _cancelMeeting(meeting),
-                              onJoin: () async {
-                                if (meeting.isChat) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => DoctorChatPage(
-                                        meetingId: meeting.id,
-                                        isDoctor: true,
-                                      ),
+                              onJoin: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => DoctorChatPage(
+                                      meetingId: meeting.id,
                                     ),
-                                  );
-                                } else {
-                                  final url = Uri.parse(
-                                    'https://meet.jit.si/${meeting.jitsiRoom}',
-                                  );
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(
-                                      url,
-                                      mode: LaunchMode.externalApplication,
-                                    );
-                                  } else {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content:
-                                              Text('Could not open video call'),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                }
+                                  ),
+                                );
                               },
                             );
                           },
@@ -448,11 +418,11 @@ final response = await _supabase
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.event_busy_outlined,
+                              Icon(Icons.chat_bubble_outline,
                                   size: 52, color: Colors.grey),
                               SizedBox(height: 12),
                               Text(
-                                'No past meetings yet',
+                                'No past chats yet',
                                 style: TextStyle(
                                     color: Colors.grey, fontSize: 15),
                               ),
@@ -470,7 +440,7 @@ final response = await _supabase
                           ),
                         ),
 
-                                      // Cancelled tab
+                  // Cancelled tab
                   _cancelled.isEmpty
                       ? const Center(
                           child: Column(
@@ -480,7 +450,7 @@ final response = await _supabase
                                   size: 52, color: Colors.grey),
                               SizedBox(height: 12),
                               Text(
-                                'No cancelled meetings',
+                                'No cancelled chats',
                                 style: TextStyle(
                                     color: Colors.grey, fontSize: 15),
                               ),

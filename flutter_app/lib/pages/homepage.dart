@@ -13,6 +13,7 @@ import 'package:flutter_app/pages/mood_tracker.dart';
 import 'package:flutter_app/pages/online_meet_page.dart';
 import 'package:flutter_app/pages/ai_chat.dart';
 import 'package:flutter_app/pages/profile_page.dart';
+import 'package:flutter_app/pages/chat_list_page.dart';
 import 'package:flutter_app/pages/maya_consent_page.dart';
 
 // Widgets
@@ -296,6 +297,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                       title: '1:1 Online Meet',
                       subtitle: 'Talk privately with a psychiatrist online',
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OnlineMeetPage())),
+                    ),
+                    FeatureCard(
+                      imagePath: 'assets/images/articles.jpg',
+                      title: '1:1 Chat',
+                      subtitle: 'Chat privately with a psychiatrist',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListPage())),
                     ),
                     FeatureCard(
                       imagePath: "assets/images/mood.jpg",
